@@ -1,0 +1,7 @@
+streamlit
+google-generativeai
+python-dotenv
+yt-dlp
+gdown
+requests
+watchdog
