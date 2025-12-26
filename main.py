@@ -156,6 +156,7 @@ def convert_to_audio_optimized(input_path):
         if str(input_path).endswith((".mp3", ".m4a", ".wav")):
             return input_path
         audio_clip = AudioFileClip(str(input_path))
+        # 64k bitrate is sufficient for vocal analysis, speeds up upload
         audio_clip.write_audiofile(output_path, bitrate="64k", logger=None)
         audio_clip.close()
         if os.path.exists(input_path): os.remove(input_path) 
@@ -212,47 +213,57 @@ def upload_to_gemini_turbo(file_path):
     return file
 
 def analyze_with_flash_lite(file_obj):
-    # Maintaining Gemini 2.5 Flash Lite as requested
+    # Using Gemini 2.5 Flash Lite as requested for maximum speed
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
-    # THE BILLION DOLLAR PROMPT
+    # ENHANCED PROMPT (Based on "Zirak AI" Master Prompt but branded for ViralPod AI)
     prompt = """
-    You are ViralPod AI, an elite Senior Video Editor and Content Strategist. 
-    Analyze the provided audio/video file and extract a structured Edit Decision List (EDL).
+    You are ViralPod AI, an Elite Senior Video Editor and Content Strategist. Your job is to EDIT a raw podcast into high-value assets by analyzing the audio/video **from 00:00 to the very last second**.
     
-    You must output strictly in JSON format.
+    ### CORE ANALYSIS PROTOCOL (STRICT):
+    1. **FULL SPECTRUM SCAN:** You must analyze the file from 0 seconds to the very end. Do not skip any section.
+    2. **EDITORIAL WISDOM:** For every clip you select, you must provide a "Wisdom" explanation. Why is this specific 30s clip better than the other 59 minutes? Explain the retention psychology, the emotional hook, or the value proposition.
+    3. **NO LAZY HOOKS:** Do NOT just pick the first 60 seconds for the Intro. Scan the MIDDLE (40-60%) and END (80-90%) for the most shocking statements.
+    4. **IGNORE SMALL TALK:** Ignore "Hi, how are you", "Thanks for coming", or "Welcome to the show."
+    5. **STRICT TIMESTAMPS:** All start/end times must be exact format MM:SS.
     
-    ### OBJECTIVES:
+    ### DELIVERABLES:
     
-    1. **The 'Hook' Intro (Total 25-30s):**
-       - Find 2-3 rapid-fire, high-energy sentences that define the episode.
-       - These will be stitched together to create a 30-second cold open.
+    **1. The "Cold Open" Teaser (Total 30s)**
+       - Find 3 specific, punchy sentences upto total duration 30 secs long that represent the CLIMAX or SHOCKING MOMENT of the episode.
+       - These clips must come from deep inside the conversation.
+       - **Wisdom:** Explain why these specific lines will force a viewer to stop scrolling and watch the full episode.
     
-    2. **The Movie Trailer (Total 60-90s):**
-       - Select 4-5 clips that build a narrative arc (Setup -> Conflict -> Tease).
-       - Ensure these clips do not reveal the final secrets, just the excitement.
+    **2. The Movie Trailer (Total 60-90s)**
+       - Select 4-5 clips that build a Story Arc:
+         * Clip 1: The Problem/Conflict.
+         * Clip 2: The Debate/Argument.
+         * Clip 3: The "Wait, what?" Moment.
+         * Clip 4: The Tease (Don't reveal the final answer).
+       - **Wisdom:** Explain how this specific sequence creates suspense.
     
-    3. **Viral Shorts (3-4 distinct clips):**
-       - Find standalone moments suitable for TikTok/Reels (Vertical Video).
-       - Criteria: High emotion, controversy, strong humor, or specific "knowledge bombs."
-       - Duration per clip: 30s to 60s.
+    **3. Viral Shorts/Reels (3-4 Distinct Clips)**
+       - Find standalone moments suitable for TikTok/Reels.
+       - Duration: 30s to 60s per clip.
+       - **Viral Score:** You must assign a score from **1-10** (10 being absolutely viral).
+       - **Wisdom:** Detailed reasoning is required. Why did you select this? Is it a "Knowledge Bomb"? Is it a "Controversial Take"? Explain the viral psychology.
     
-    4. **The 'Mistake Hunter' (Quality Control):**
-       - Identify technical and performance errors to be removed.
+    **4. The 'Mistake Hunter' (Quality Control)**
+       - Identify errors to be removed.
        - **Long Silence:** Dead air > 7 seconds.
        - **Audio Disturbances:** Coughing ("Khansi"), sneezing, loud throat clearing.
-       - **Editor Commands:** If a speaker says "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake).
+       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake).
     
-    ### OUTPUT SCHEMA (JSON ONLY):
+    ### OUTPUT SCHEMA (JSON ONLY - NO MARKDOWN):
     {
-      "intro_sequence": [
-        {"start": "MM:SS", "end": "MM:SS", "text": "...", "reason": "High energy hook"}
+      "cold_open_clips": [
+        {"start": "MM:SS", "end": "MM:SS", "text": "...", "reason": "Detailed editorial wisdom on why this hook beats the rest."}
       ],
       "trailer_structure": [
-        {"start": "MM:SS", "end": "MM:SS", "text": "...", "narrative_role": "Setup/Climax"}
+        {"start": "MM:SS", "end": "MM:SS", "text": "...", "narrative_role": "Conflict/Climax", "reason": "Wisdom on why this fits the story arc."}
       ],
       "viral_shorts": [
-        {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "virality_score": "9/10", "reason": "..."}
+        {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "virality_score": "9/10", "reason": "Detailed viral psychology analysis. Why this clip will stop the scroll."}
       ],
       "mistakes_log": [
         {"timestamp": "MM:SS", "error_type": "Silence/Cough/Command", "description": "Speaker coughed/Asked to cut"}
@@ -337,11 +348,11 @@ def main():
             # --- PHASE 4: RESULTS RENDER ---
             st.markdown("<br><br>", unsafe_allow_html=True)
             
-            # --- INTRO SEQUENCE ---
-            st.markdown("<h3 style='color: white;'>🔥 The Perfect Cold Open (Intro)</h3>", unsafe_allow_html=True)
-            intro_seq = data.get('intro_sequence', [])
-            if intro_seq:
-                for clip in intro_seq:
+            # --- COLD OPEN CLIPS ---
+            st.markdown("<h3 style='color: white;'>🔥 The Cold Open (Teaser Hooks)</h3>", unsafe_allow_html=True)
+            cold_opens = data.get('cold_open_clips', [])
+            if cold_opens:
+                for clip in cold_opens:
                     st.markdown(f"""
                     <div class="glass-card" style="margin-bottom: 10px; padding: 15px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -349,11 +360,13 @@ def main():
                             <span style="font-family:monospace; color:#94a3b8; font-weight:bold;">{clip.get('start')} - {clip.get('end')}</span>
                         </div>
                         <p style="color:#e2e8f0; margin-top:10px; font-style:italic;">"{clip.get('text')}"</p>
-                        <p style="color:#64748b; font-size:0.8rem; margin-top:5px;">Reason: {clip.get('reason')}</p>
+                        <p style="color:#94a3b8; font-size:0.85rem; margin-top:8px; border-left: 2px solid #a855f7; padding-left: 10px;">
+                            <strong style="color: #c4b5fd;">Editorial Wisdom:</strong> {clip.get('reason')}
+                        </p>
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("No clear intro hooks found.")
+                st.info("No clear cold open hooks found.")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -369,6 +382,7 @@ def main():
                             <span style="font-family:monospace; color:#94a3b8;">{clip.get('start')} - {clip.get('end')}</span>
                         </div>
                         <p style="color:#cbd5e1; margin-top:5px;">{clip.get('text')}</p>
+                        <p style="color:#94a3b8; font-size:0.8rem; margin-top:5px;"><i>{clip.get('reason')}</i></p>
                     </div>
                     """, unsafe_allow_html=True)
             else:
@@ -389,7 +403,9 @@ def main():
                                 <span style="font-family:monospace; color:#94a3b8;">{clip.get('start')}</span>
                             </div>
                             <h4 style="margin-top:10px; font-weight:600; color:white;">{clip.get('title')}</h4>
-                            <p style="color:#94a3b8; font-size:0.85rem; margin-top:5px;">{clip.get('reason')}</p>
+                            <p style="color:#94a3b8; font-size:0.85rem; margin-top:10px;">
+                                <strong style="color: #6ee7b7;">Why Viral?</strong> {clip.get('reason')}
+                            </p>
                             <div style="margin-top:10px; font-weight:700; color:#fff;">Score: {clip.get('virality_score')}</div>
                         </div>
                         """, unsafe_allow_html=True)
