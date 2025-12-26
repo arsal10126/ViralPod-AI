@@ -1,5 +1,12 @@
-import streamlit as st
 import os
+
+# --- FORCE CONFIGURATION (MUST BE AT THE VERY TOP) ---
+# This forces the server to accept 5GB files, overriding config.toml issues
+os.environ["STREAMLIT_SERVER_MAX_UPLOAD_SIZE"] = "5000"
+os.environ["STREAMLIT_SERVER_ENABLE_CORS"] = "false"
+os.environ["STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION"] = "false"
+
+import streamlit as st
 import time
 import json
 import re
@@ -9,9 +16,9 @@ import google.generativeai as genai
 from pathlib import Path
 from dotenv import load_dotenv
 import yt_dlp
-import gc  # Garbage Collection for server memory management
+import gc
 
-# --- CONFIGURATION & SETUP ---
+# --- SETUP ---
 st.set_page_config(
     page_title="ViralPod AI",
     page_icon="⚡",
@@ -85,19 +92,10 @@ st.markdown("""
     .result-score { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; margin-top: 10px; }
     .score-high { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #059669; }
     .score-med { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #d97706; }
-    .server-warning {
-        background-color: rgba(234, 179, 8, 0.1);
-        border: 1px solid rgba(234, 179, 8, 0.5);
-        color: #fde047;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        margin-bottom: 15px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIC & HELPERS ---
+# --- HELPER FUNCTIONS ---
 
 def get_api_key():
     api_key = None
@@ -144,42 +142,55 @@ def save_uploaded_file_chunked(uploaded_file, destination_path):
                 if not chunk: break
                 f.write(chunk)
     finally:
-        # CRITICAL FOR SERVER: Free up the RAM immediately
         uploaded_file = None
         gc.collect()
     return destination_path
 
 def upload_to_gemini(file_path, mime_type=None):
-    file = genai.upload_file(file_path, mime_type=mime_type)
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    status_text.markdown("**Encrypting & Uploading Media to Neural Engine...**")
-    
-    while file.state.name == "PROCESSING":
-        for i in range(100):
-            time.sleep(0.05)
-            progress_bar.progress(i + 1)
-        file = genai.get_file(file.name)
+    """Uploads file using the File API."""
+    try:
+        # Check file size
+        file_size_gb = os.path.getsize(file_path) / (1024**3)
+        if file_size_gb > 1.95:
+            st.warning(f"⚠️ File is {file_size_gb:.2f}GB. Uploading to Neural Engine (this may take time)...")
         
-    if file.state.name == "FAILED":
-        raise ValueError("Neural Engine processing failed.")
+        file = genai.upload_file(file_path, mime_type=mime_type)
         
-    progress_bar.empty()
-    status_text.empty()
-    return file
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        status_text.markdown("**Encrypting & Uploading Media to Neural Engine...**")
+        
+        while file.state.name == "PROCESSING":
+            for i in range(100):
+                time.sleep(0.05)
+                progress_bar.progress(i + 1)
+            file = genai.get_file(file.name)
+            
+        if file.state.name == "FAILED":
+            raise ValueError(f"Neural Engine processing failed: {file.state.name}")
+            
+        progress_bar.empty()
+        status_text.empty()
+        return file
+    except Exception as e:
+        if "larger than" in str(e):
+            raise ValueError("File exceeds 2GB API limit. Please upload this video to Google Drive/YouTube and use the Link Input tab instead.")
+        raise e
 
 def analyze_content(file_obj):
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+    # UPDATED: Using the new Gemini 2.5 Flash Lite model
+    model = genai.GenerativeModel(model_name="gemini-2.5-flash-lite")
+    
     prompt = """
     Act as an elite Viral Content Strategist. Analyze this video for:
-    1. High-Engagement Expressions (Shock, Laughter, Debate).
-    2. Technical Integrity (No blur, clear audio).
+    1. High-Engagement Expressions.
+    2. Technical Integrity.
     3. The "Hook" Factor.
     
     Return STRICT JSON:
     {
         "viral_shorts": [
-            {"title": "Punchy Headline", "start": "MM:SS", "end": "MM:SS", "reasoning": "Brief strategy why", "viral_score": 95}
+            {"title": "Punchy Headline", "start": "MM:SS", "end": "MM:SS", "reasoning": "Strategy", "viral_score": 95}
         ],
         "hook_intro": {
             "title": "The Hook", "start": "MM:SS", "end": "MM:SS", "reasoning": "Strategy", "viral_score": 90
@@ -188,7 +199,6 @@ def analyze_content(file_obj):
             "title": "Trailer Cut", "start": "MM:SS", "end": "MM:SS", "reasoning": "Strategy", "viral_score": 92
         }
     }
-    Provide exactly 3 shorts, 1 hook, 1 trailer.
     """
     response = model.generate_content(
         [file_obj, prompt],
@@ -201,7 +211,7 @@ def render_hero():
         <div style="text-align: center; padding: 40px 0;">
             <h1 class="main-header">ViralPod AI</h1>
             <p style="font-size: 1.2rem; color: #94a3b8; max-width: 600px; margin: 0 auto;">
-                Next-Gen Content Intelligence. Turn long-form video into viral assets.
+                Next-Gen Content Intelligence. Powered by Gemini 2.5 Flash Lite.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -251,8 +261,7 @@ def main():
             if url_input: media_source = "url"
 
         with tab_upload:
-            st.markdown("<div style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;'>⚠️ Server Upload Limit: 5GB. For faster processing, use Link Input.</div>", unsafe_allow_html=True)
-            # File uploader with no explicit argument limit (handled by config.toml)
+            st.markdown("<div style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;'>⚠️ <b>LIMIT: 2GB per upload.</b> For larger files, upload to Drive and paste the link in the left tab.</div>", unsafe_allow_html=True)
             uploaded_file = st.file_uploader("Upload Video", type=["mp4", "mov", "mp3", "m4a"], label_visibility="collapsed")
             if uploaded_file: media_source = "upload"
         
@@ -271,13 +280,15 @@ def main():
             temp_dir.mkdir(exist_ok=True)
             downloaded_file_path = None
 
-            # --- PHASE 1: INGESTION ---
             with st.status("Initializing Neural Ingestion...", expanded=True) as status:
                 st.write("Establishing secure connection...")
                 
                 if media_source == "upload":
+                    if uploaded_file.size > 2147483648:
+                        st.error("❌ File Too Large: Browsers cannot upload files larger than 2GB reliably. Please upload this video to Google Drive or YouTube and paste the link instead.")
+                        return
+
                     downloaded_file_path = temp_dir / sanitize_filename(uploaded_file.name)
-                    # Use memory-safe chunked saving
                     save_uploaded_file_chunked(uploaded_file, downloaded_file_path)
                     
                 elif media_source == "url":
@@ -306,14 +317,11 @@ def main():
                 st.error("Ingestion Failed.")
                 return
 
-            # --- PHASE 2: PROCESSING ---
             gemini_file = upload_to_gemini(downloaded_file_path)
 
-            # --- PHASE 3: ANALYSIS ---
             with st.spinner("🤖 Analyzing facial micro-expressions and audio sentiment..."):
                 result_json = analyze_content(gemini_file)
 
-            # --- PHASE 4: RENDER RESULTS ---
             st.markdown("<br><hr style='border-color: #334155'><br>", unsafe_allow_html=True)
             st.markdown("<h2 style='text-align: center; color: white;'>✨ Viral Candidates Identified</h2><br>", unsafe_allow_html=True)
 
