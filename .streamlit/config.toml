@@ -1,5 +1,7 @@
 [server]
-maxUploadSize = 2000
+maxUploadSize = 5000
+enableCORS = false
+enableXsrfProtection = false
 
 [theme]
 base = "dark"
