@@ -1,24 +1,24 @@
 import os
 
-# --- FORCE CONFIGURATION (MUST BE AT THE VERY TOP) ---
-# This forces the server to accept 5GB files, overriding config.toml issues
-os.environ["STREAMLIT_SERVER_MAX_UPLOAD_SIZE"] = "5000"
+# --- 1. SERVER CONFIGURATION ---
+os.environ["STREAMLIT_SERVER_MAX_UPLOAD_SIZE"] = "10000"
 os.environ["STREAMLIT_SERVER_ENABLE_CORS"] = "false"
 os.environ["STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION"] = "false"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 
 import streamlit as st
 import time
 import json
 import re
 import requests
-import gdown
 import google.generativeai as genai
 from pathlib import Path
 from dotenv import load_dotenv
 import yt_dlp
 import gc
+from moviepy.editor import VideoFileClip, AudioFileClip
 
-# --- SETUP ---
+# --- 2. PREMIUM UI SETUP ---
 st.set_page_config(
     page_title="ViralPod AI",
     page_icon="⚡",
@@ -28,74 +28,116 @@ st.set_page_config(
 
 load_dotenv()
 
-# --- MODERN UI INJECTION ---
+# High-Tech "Silicon Valley" CSS Injection
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap');
+    
+    html, body, [class*="css"] { 
+        font-family: 'Inter', sans-serif; 
+        background-color: #020617; 
+        color: #f8fafc;
+    }
+
+    /* Gradient Brand Header */
     .main-header {
-        background: linear-gradient(90deg, #4338ca 0%, #6366f1 100%);
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800;
-        font-size: 3rem;
+        font-size: 3.5rem;
+        letter-spacing: -1px;
         margin-bottom: 0.5rem;
+        text-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
     }
+
+    /* Input Container Styling */
+    .input-container {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Clean Input Fields */
+    .stTextInput > div > div > input {
+        background-color: #0f172a !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px;
+        padding: 15px;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+    .stTextInput > div > div > input:focus {
+        border-color: #818cf8 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Button Styling */
+    .stButton > button {
+        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        width: 100%;
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.5);
+    }
+
+    /* Result Cards */
     .glass-card {
-        background: rgba(30, 41, 59, 0.7);
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
         padding: 24px;
-        margin-bottom: 20px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+        transition: transform 0.2s ease;
+        position: relative;
+        overflow: hidden;
     }
     .glass-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.3);
-        border: 1px solid rgba(99, 102, 241, 0.5);
+        border-color: rgba(139, 92, 246, 0.5);
+        box-shadow: 0 10px 40px -10px rgba(139, 92, 246, 0.2);
     }
-    .stTextInput > div > div > input {
-        background-color: #1e293b;
-        color: white;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        padding: 10px 15px;
-    }
-    .stTextInput > div > div > input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-    }
-    .stButton > button {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        width: 100%;
-        transition: all 0.3s ease;
+
+    /* Badges */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    .stButton > button:hover {
-        opacity: 0.9;
-        transform: scale(1.02);
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
-    }
+    .badge-purple { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-red { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* Hiding Streamlit Branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .result-title { font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 5px; }
-    .result-time { color: #94a3b8; font-size: 0.9rem; font-family: monospace; font-weight: 600; }
-    .result-score { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; margin-top: 10px; }
-    .score-high { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #059669; }
-    .score-med { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #d97706; }
+    
 </style>
 """, unsafe_allow_html=True)
 
-# --- HELPER FUNCTIONS ---
+# --- 3. INTERNAL LOGIC ---
 
 def get_api_key():
     api_key = None
@@ -108,96 +150,113 @@ def get_api_key():
 def sanitize_filename(filename):
     return re.sub(r'[\\/*?:"<>|]', "", filename)
 
-def process_dropbox_link(url):
-    if "dropbox.com" in url and "dl=0" in url: return url.replace("dl=0", "dl=1")
-    return url
+def convert_to_audio_optimized(input_path):
+    try:
+        output_path = str(input_path).rsplit(".", 1)[0] + ".mp3"
+        if str(input_path).endswith((".mp3", ".m4a", ".wav")):
+            return input_path
+        audio_clip = AudioFileClip(str(input_path))
+        audio_clip.write_audiofile(output_path, bitrate="64k", logger=None)
+        audio_clip.close()
+        if os.path.exists(input_path): os.remove(input_path) 
+        return output_path
+    except Exception as e:
+        return input_path
 
-def download_youtube_video(url, output_dir):
+def smart_downloader(url, output_dir):
     sanitized_output = os.path.join(output_dir, '%(title)s.%(ext)s')
     ydl_opts = {
-        'format': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]', 
+        'format': 'bestaudio/worst', 
         'outtmpl': sanitized_output,
         'noplaylist': True,
         'quiet': True,
         'no_warnings': True,
+        'compat_opts': ['no-live-chat'], 
     }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info)
-
-def download_file_from_url(url, output_path):
-    response = requests.get(url, stream=True)
-    response.raise_for_status()
-    with open(output_path, 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
-    return output_path
-
-def save_uploaded_file_chunked(uploaded_file, destination_path):
-    """Writes large uploaded files to disk in chunks to save RAM."""
     try:
-        with open(destination_path, "wb") as f:
-            while True:
-                chunk = uploaded_file.read(4 * 1024 * 1024) # 4MB chunks
-                if not chunk: break
-                f.write(chunk)
-    finally:
-        uploaded_file = None
-        gc.collect()
-    return destination_path
-
-def upload_to_gemini(file_path, mime_type=None):
-    """Uploads file using the File API."""
-    try:
-        # Check file size
-        file_size_gb = os.path.getsize(file_path) / (1024**3)
-        if file_size_gb > 1.95:
-            st.warning(f"⚠️ File is {file_size_gb:.2f}GB. Uploading to Neural Engine (this may take time)...")
-        
-        file = genai.upload_file(file_path, mime_type=mime_type)
-        
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        status_text.markdown("**Encrypting & Uploading Media to Neural Engine...**")
-        
-        while file.state.name == "PROCESSING":
-            for i in range(100):
-                time.sleep(0.05)
-                progress_bar.progress(i + 1)
-            file = genai.get_file(file.name)
-            
-        if file.state.name == "FAILED":
-            raise ValueError(f"Neural Engine processing failed: {file.state.name}")
-            
-        progress_bar.empty()
-        status_text.empty()
-        return file
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            return ydl.prepare_filename(info)
     except Exception as e:
-        if "larger than" in str(e):
-            raise ValueError("File exceeds 2GB API limit. Please upload this video to Google Drive/YouTube and use the Link Input tab instead.")
+        if "http" in url:
+            filename = os.path.join(output_dir, "direct_download.mp4")
+            response = requests.get(url, stream=True)
+            with open(filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    f.write(chunk)
+            return filename
         raise e
 
-def analyze_content(file_obj):
-    # UPDATED: Using the new Gemini 2.5 Flash Lite model
-    model = genai.GenerativeModel(model_name="gemini-2.5-flash-lite")
+def save_uploaded_chunked(uploaded_file, path):
+    with open(path, "wb") as f:
+        while True:
+            chunk = uploaded_file.read(10 * 1024 * 1024)
+            if not chunk: break
+            f.write(chunk)
+    uploaded_file = None
+    gc.collect()
+    return path
+
+def upload_to_gemini_turbo(file_path):
+    file = genai.upload_file(file_path, mime_type="audio/mp3")
+    bar = st.progress(0)
+    while file.state.name == "PROCESSING":
+        time.sleep(0.5)
+        bar.progress(50)
+        file = genai.get_file(file.name)
+    bar.progress(100)
+    time.sleep(0.2)
+    bar.empty()
+    if file.state.name == "FAILED":
+        raise ValueError("Neural Engine could not process this video format.")
+    return file
+
+def analyze_with_flash_lite(file_obj):
+    # Maintaining Gemini 2.5 Flash Lite as requested
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
+    # THE BILLION DOLLAR PROMPT
     prompt = """
-    Act as an elite Viral Content Strategist. Analyze this video for:
-    1. High-Engagement Expressions.
-    2. Technical Integrity.
-    3. The "Hook" Factor.
+    You are ViralPod AI, an elite Senior Video Editor and Content Strategist. 
+    Analyze the provided audio/video file and extract a structured Edit Decision List (EDL).
     
-    Return STRICT JSON:
+    You must output strictly in JSON format.
+    
+    ### OBJECTIVES:
+    
+    1. **The 'Hook' Intro (Total 25-30s):**
+       - Find 2-3 rapid-fire, high-energy sentences that define the episode.
+       - These will be stitched together to create a 30-second cold open.
+    
+    2. **The Movie Trailer (Total 60-90s):**
+       - Select 4-5 clips that build a narrative arc (Setup -> Conflict -> Tease).
+       - Ensure these clips do not reveal the final secrets, just the excitement.
+    
+    3. **Viral Shorts (3-4 distinct clips):**
+       - Find standalone moments suitable for TikTok/Reels (Vertical Video).
+       - Criteria: High emotion, controversy, strong humor, or specific "knowledge bombs."
+       - Duration per clip: 30s to 60s.
+    
+    4. **The 'Mistake Hunter' (Quality Control):**
+       - Identify technical and performance errors to be removed.
+       - **Long Silence:** Dead air > 7 seconds.
+       - **Audio Disturbances:** Coughing ("Khansi"), sneezing, loud throat clearing.
+       - **Editor Commands:** If a speaker says "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake).
+    
+    ### OUTPUT SCHEMA (JSON ONLY):
     {
-        "viral_shorts": [
-            {"title": "Punchy Headline", "start": "MM:SS", "end": "MM:SS", "reasoning": "Strategy", "viral_score": 95}
-        ],
-        "hook_intro": {
-            "title": "The Hook", "start": "MM:SS", "end": "MM:SS", "reasoning": "Strategy", "viral_score": 90
-        },
-        "trailer_segment": {
-            "title": "Trailer Cut", "start": "MM:SS", "end": "MM:SS", "reasoning": "Strategy", "viral_score": 92
-        }
+      "intro_sequence": [
+        {"start": "MM:SS", "end": "MM:SS", "text": "...", "reason": "High energy hook"}
+      ],
+      "trailer_structure": [
+        {"start": "MM:SS", "end": "MM:SS", "text": "...", "narrative_role": "Setup/Climax"}
+      ],
+      "viral_shorts": [
+        {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "virality_score": "9/10", "reason": "..."}
+      ],
+      "mistakes_log": [
+        {"timestamp": "MM:SS", "error_type": "Silence/Cough/Command", "description": "Speaker coughed/Asked to cut"}
+      ]
     }
     """
     response = model.generate_content(
@@ -206,148 +265,160 @@ def analyze_content(file_obj):
     )
     return json.loads(response.text)
 
-def render_hero():
-    st.markdown("""
-        <div style="text-align: center; padding: 40px 0;">
-            <h1 class="main-header">ViralPod AI</h1>
-            <p style="font-size: 1.2rem; color: #94a3b8; max-width: 600px; margin: 0 auto;">
-                Next-Gen Content Intelligence. Powered by Gemini 2.5 Flash Lite.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-
-def render_result_card(title, time_range, score, reasoning, type="Short"):
-    score_color = "score-high" if score >= 90 else "score-med"
-    return f"""
-    <div class="glass-card">
-        <div style="display: flex; justify-content: space-between; align-items: start;">
-            <span style="background: #334155; color: #cbd5e1; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">{type}</span>
-            <span class="result-time">⏱ {time_range}</span>
-        </div>
-        <div style="margin-top: 15px;">
-            <div class="result-title">{title}</div>
-            <p style="color: #94a3b8; font-size: 0.9rem; line-height: 1.5; margin-top: 5px;">{reasoning}</p>
-        </div>
-        <div class="result-score {score_color}">
-            ⚡ Viral Score: {score}/100
-        </div>
-    </div>
-    """
-
-# --- MAIN APP ---
+# --- 4. MAIN APPLICATION ---
 
 def main():
     api_key = get_api_key()
-    if api_key:
-        genai.configure(api_key=api_key)
-    else:
-        st.warning("⚠️ API Key not detected.")
-    
-    render_hero()
+    if api_key: genai.configure(api_key=api_key)
+    else: st.warning("⚠️ System Key Missing")
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
+    st.markdown('<div style="text-align: center; padding: 40px 0;"><h1 class="main-header">ViralPod AI</h1><p style="color: #94a3b8; font-size: 1.2rem;">Enterprise-Grade Video Intelligence</p></div>', unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 6, 1])
     with col2:
-        st.markdown('<div style="background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;">', unsafe_allow_html=True)
-        tab_url, tab_upload = st.tabs(["🔗 Link Input", "📂 File Upload"])
+        st.markdown('<div class="input-container">', unsafe_allow_html=True)
+        tab_link, tab_file = st.tabs(["🔗 INTELLIGENT LINK", "📂 SECURE UPLOAD"])
         
-        media_source = None
-        url_input = None
-        uploaded_file = None
-
-        with tab_url:
-            st.markdown("<div style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;'>✅ <b>Recommended for Large Files (>1GB)</b> to avoid Server Timeouts.</div>", unsafe_allow_html=True)
-            url_input = st.text_input("YouTube / Drive / Dropbox URL", placeholder="https://...")
-            if url_input: media_source = "url"
-
-        with tab_upload:
-            st.markdown("<div style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;'>⚠️ <b>LIMIT: 2GB per upload.</b> For larger files, upload to Drive and paste the link in the left tab.</div>", unsafe_allow_html=True)
-            uploaded_file = st.file_uploader("Upload Video", type=["mp4", "mov", "mp3", "m4a"], label_visibility="collapsed")
-            if uploaded_file: media_source = "upload"
+        source = None
+        input_val = None
         
+        with tab_link:
+            url = st.text_input("URL Input", placeholder="Paste YouTube / Google Drive / Dropbox Link", key="url_input", label_visibility="collapsed")
+            if url: 
+                source = "url"
+                input_val = url
+
+        with tab_file:
+            uploaded = st.file_uploader("File Upload", type=['mp4','mov','mp3','wav','m4a'], label_visibility="collapsed")
+            if uploaded:
+                source = "upload"
+                input_val = uploaded
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        start_btn = st.button("INITIALIZE ANALYSIS SEQUENCE")
         st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True)
-        
-        process_btn = st.button("🚀 IGNITE ENGINE", type="primary")
 
-    if process_btn and (url_input or uploaded_file):
-        if not api_key:
-            st.error("Access Denied: API Key Missing")
-            return
+    if start_btn and input_val:
+        if not api_key: st.error("Authorization Failed"); return
+
+        temp_dir = Path("temp_workspace")
+        temp_dir.mkdir(exist_ok=True)
+        final_audio_path = None
+        raw_download_path = None
 
         try:
-            temp_dir = Path("temp_media")
-            temp_dir.mkdir(exist_ok=True)
-            downloaded_file_path = None
-
-            with st.status("Initializing Neural Ingestion...", expanded=True) as status:
-                st.write("Establishing secure connection...")
+            # --- PHASE 1: ACQUISITION ---
+            with st.status("🚀 ViralPod AI Sequence Initiated...", expanded=True) as status:
                 
-                if media_source == "upload":
-                    if uploaded_file.size > 2147483648:
-                        st.error("❌ File Too Large: Browsers cannot upload files larger than 2GB reliably. Please upload this video to Google Drive or YouTube and paste the link instead.")
-                        return
+                if source == "url":
+                    st.write("Target acquired. Establishing secure stream...")
+                    raw_download_path = smart_downloader(input_val, str(temp_dir))
+                    st.write("Stream captured successfully.")
+                
+                elif source == "upload":
+                    st.write("Verifying file integrity...")
+                    raw_download_path = temp_dir / sanitize_filename(input_val.name)
+                    save_uploaded_chunked(input_val, raw_download_path)
+                    st.write("Upload buffered to secure storage.")
 
-                    downloaded_file_path = temp_dir / sanitize_filename(uploaded_file.name)
-                    save_uploaded_file_chunked(uploaded_file, downloaded_file_path)
-                    
-                elif media_source == "url":
-                    if "youtube" in url_input or "youtu.be" in url_input:
-                        st.write("Extracting stream from YouTube...")
-                        downloaded_file_path = download_youtube_video(url_input, str(temp_dir))
-                    elif "drive.google.com" in url_input:
-                        st.write("Authenticating Google Drive link...")
-                        if "id=" in url_input: file_id = url_input.split("id=")[1].split("&")[0]
-                        elif "/d/" in url_input: file_id = url_input.split("/d/")[1].split("/")[0]
-                        else: file_id = None
-                        
-                        if file_id:
-                            output_path = temp_dir / f"gdrive_{file_id}.mp4"
-                            gdown.download(f'https://drive.google.com/uc?id={file_id}', str(output_path), quiet=False)
-                            downloaded_file_path = str(output_path)
-                    elif "dropbox" in url_input:
-                        st.write("Bridging Dropbox stream...")
-                        downloaded_file_path = download_file_from_url(process_dropbox_link(url_input), temp_dir / "dropbox.mp4")
-                    else:
-                        downloaded_file_path = download_file_from_url(url_input, temp_dir / "direct.mp4")
+                st.write("Optimizing video data for Neural Engine...")
+                final_audio_path = convert_to_audio_optimized(raw_download_path)
                 
                 status.update(label="Ingestion Complete", state="complete")
 
-            if not downloaded_file_path:
-                st.error("Ingestion Failed.")
-                return
-
-            gemini_file = upload_to_gemini(downloaded_file_path)
-
-            with st.spinner("🤖 Analyzing facial micro-expressions and audio sentiment..."):
-                result_json = analyze_content(gemini_file)
-
-            st.markdown("<br><hr style='border-color: #334155'><br>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: white;'>✨ Viral Candidates Identified</h2><br>", unsafe_allow_html=True)
-
-            r_col1, r_col2 = st.columns(2)
-            with r_col1:
-                h = result_json.get('hook_intro', {})
-                st.markdown(render_result_card(h.get('title'), f"{h.get('start')} - {h.get('end')}", h.get('viral_score'), h.get('reasoning'), "HOOK"), unsafe_allow_html=True)
-            with r_col2:
-                t = result_json.get('trailer_segment', {})
-                st.markdown(render_result_card(t.get('title'), f"{t.get('start')} - {t.get('end')}", t.get('viral_score'), t.get('reasoning'), "TRAILER"), unsafe_allow_html=True)
-
-            st.markdown("<h3 style='color: #94a3b8; margin-top: 30px;'>Top Viral Shorts</h3>", unsafe_allow_html=True)
+            # --- PHASE 2: PROCESSING ---
+            st.toast("ViralPod AI is uploading your content to the Neural Engine...", icon="☁️")
+            gemini_file = upload_to_gemini_turbo(final_audio_path)
             
-            shorts = result_json.get("viral_shorts", [])
-            s_col1, s_col2, s_col3 = st.columns(3)
-            for i, clip in enumerate(shorts):
-                html = render_result_card(clip.get('title'), f"{clip.get('start')} - {clip.get('end')}", clip.get('viral_score'), clip.get('reasoning'), f"SHORT #{i+1}")
-                if i == 0: s_col1.markdown(html, unsafe_allow_html=True)
-                elif i == 1: s_col2.markdown(html, unsafe_allow_html=True)
-                elif i == 2: s_col3.markdown(html, unsafe_allow_html=True)
+            # --- PHASE 3: ANALYSIS ---
+            with st.spinner("ViralPod AI is analyzing your video... (This may take up to 5 minutes depending on duration)"):
+                data = analyze_with_flash_lite(gemini_file)
 
-            try: os.remove(downloaded_file_path)
+            # --- PHASE 4: RESULTS RENDER ---
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            
+            # --- INTRO SEQUENCE ---
+            st.markdown("<h3 style='color: white;'>🔥 The Perfect Cold Open (Intro)</h3>", unsafe_allow_html=True)
+            intro_seq = data.get('intro_sequence', [])
+            if intro_seq:
+                for clip in intro_seq:
+                    st.markdown(f"""
+                    <div class="glass-card" style="margin-bottom: 10px; padding: 15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="badge badge-purple">HOOK CLIP</span>
+                            <span style="font-family:monospace; color:#94a3b8; font-weight:bold;">{clip.get('start')} - {clip.get('end')}</span>
+                        </div>
+                        <p style="color:#e2e8f0; margin-top:10px; font-style:italic;">"{clip.get('text')}"</p>
+                        <p style="color:#64748b; font-size:0.8rem; margin-top:5px;">Reason: {clip.get('reason')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("No clear intro hooks found.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # --- TRAILER STRUCTURE ---
+            st.markdown("<h3 style='color: white;'>🎬 Cinematic Trailer Arc</h3>", unsafe_allow_html=True)
+            trailer_seq = data.get('trailer_structure', [])
+            if trailer_seq:
+                for clip in trailer_seq:
+                    st.markdown(f"""
+                    <div class="glass-card" style="margin-bottom: 10px; padding: 15px; border-left: 3px solid #f472b6;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color: #f472b6; font-weight:bold; font-size:0.8rem;">{clip.get('narrative_role', 'Clip').upper()}</span>
+                            <span style="font-family:monospace; color:#94a3b8;">{clip.get('start')} - {clip.get('end')}</span>
+                        </div>
+                        <p style="color:#cbd5e1; margin-top:5px;">{clip.get('text')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Insufficient data for trailer generation.")
+
+            # --- VIRAL SHORTS ---
+            st.markdown("<h3 style='margin-top:40px; text-align:center; color:white;'>📱 Viral Shorts Candidates</h3>", unsafe_allow_html=True)
+            shorts = data.get('viral_shorts', [])
+            if shorts:
+                cols = st.columns(3)
+                for i, clip in enumerate(shorts):
+                    col_idx = i % 3
+                    with cols[col_idx]:
+                        st.markdown(f"""
+                        <div class="glass-card">
+                            <div style="display:flex; justify-content:space-between;">
+                                <span class="badge badge-green">SHORT #{i+1}</span>
+                                <span style="font-family:monospace; color:#94a3b8;">{clip.get('start')}</span>
+                            </div>
+                            <h4 style="margin-top:10px; font-weight:600; color:white;">{clip.get('title')}</h4>
+                            <p style="color:#94a3b8; font-size:0.85rem; margin-top:5px;">{clip.get('reason')}</p>
+                            <div style="margin-top:10px; font-weight:700; color:#fff;">Score: {clip.get('virality_score')}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+            # --- MISTAKES LOG ---
+            st.markdown("<br><hr style='border-color: #334155'><br>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: #ef4444;'>🛠️ The Mistake Hunter Log</h3>", unsafe_allow_html=True)
+            
+            mistakes = data.get('mistakes_log', [])
+            if mistakes:
+                for error in mistakes:
+                    st.markdown(f"""
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span class="badge badge-red">{error.get('error_type')}</span>
+                            <span style="color: #fca5a5; margin-left: 10px;">{error.get('description')}</span>
+                        </div>
+                        <span style="font-family:monospace; color:#fca5a5; font-weight:bold;">{error.get('timestamp')}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.success("No major technical errors detected.")
+
+            try: 
+                if final_audio_path: os.remove(final_audio_path)
             except: pass
 
         except Exception as e:
-            st.error(f"System Error: {e}")
+            st.error(f"Execution Halted: {str(e)}")
 
 if __name__ == "__main__":
     main()
