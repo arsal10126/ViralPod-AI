@@ -5,3 +5,5 @@ yt-dlp
 gdown
 requests
 watchdog
+moviepy
+imageio-ffmpeg
