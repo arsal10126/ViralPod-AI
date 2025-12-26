@@ -9,30 +9,23 @@ import google.generativeai as genai
 from pathlib import Path
 from dotenv import load_dotenv
 import yt_dlp
+import gc  # Garbage Collection for server memory management
 
 # --- CONFIGURATION & SETUP ---
 st.set_page_config(
     page_title="ViralPod AI",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="collapsed" # Hide sidebar for a cleaner look
+    initial_sidebar_state="collapsed"
 )
 
-# Load environment variables
 load_dotenv()
 
 # --- MODERN UI INJECTION ---
-# This CSS transforms standard Streamlit into a high-tech dashboard
 st.markdown("""
 <style>
-    /* Import Inter Font */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-
-    /* Gradient Background for the Header */
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .main-header {
         background: linear-gradient(90deg, #4338ca 0%, #6366f1 100%);
         -webkit-background-clip: text;
@@ -41,8 +34,6 @@ st.markdown("""
         font-size: 3rem;
         margin-bottom: 0.5rem;
     }
-
-    /* Glassmorphism Cards */
     .glass-card {
         background: rgba(30, 41, 59, 0.7);
         backdrop-filter: blur(10px);
@@ -53,14 +44,11 @@ st.markdown("""
         margin-bottom: 20px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
     .glass-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.3);
         border: 1px solid rgba(99, 102, 241, 0.5);
     }
-
-    /* Custom Input Fields */
     .stTextInput > div > div > input {
         background-color: #1e293b;
         color: white;
@@ -72,8 +60,6 @@ st.markdown("""
         border-color: #6366f1;
         box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
-
-    /* Primary Button Styling */
     .stButton > button {
         background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         color: white;
@@ -91,53 +77,44 @@ st.markdown("""
         transform: scale(1.02);
         box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
     }
-    
-    /* Hide Streamlit Elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    /* Result Typography */
     .result-title { font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 5px; }
     .result-time { color: #94a3b8; font-size: 0.9rem; font-family: monospace; font-weight: 600; }
-    .result-score { 
-        display: inline-block; 
-        padding: 4px 12px; 
-        border-radius: 20px; 
-        font-weight: 800; 
-        font-size: 0.85rem;
-        margin-top: 10px;
-    }
+    .result-score { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; margin-top: 10px; }
     .score-high { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #059669; }
     .score-med { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #d97706; }
-
+    .server-warning {
+        background-color: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.5);
+        color: #fde047;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- LOGIC & HELPERS ---
 
 def get_api_key():
-    """Retrieves API Key from st.secrets, env, or sidebar."""
     api_key = None
     try:
-        if "GOOGLE_API_KEY" in st.secrets:
-            api_key = st.secrets["GOOGLE_API_KEY"]
-    except FileNotFoundError:
-        pass
-    if not api_key:
-        api_key = os.getenv("GOOGLE_API_KEY")
+        if "GOOGLE_API_KEY" in st.secrets: api_key = st.secrets["GOOGLE_API_KEY"]
+    except FileNotFoundError: pass
+    if not api_key: api_key = os.getenv("GOOGLE_API_KEY")
     return api_key
 
 def sanitize_filename(filename):
     return re.sub(r'[\\/*?:"<>|]', "", filename)
 
 def process_dropbox_link(url):
-    if "dropbox.com" in url and "dl=0" in url:
-        return url.replace("dl=0", "dl=1")
+    if "dropbox.com" in url and "dl=0" in url: return url.replace("dl=0", "dl=1")
     return url
 
 def download_youtube_video(url, output_dir):
-    """Downloads optimized video (360p) for AI Analysis."""
     sanitized_output = os.path.join(output_dir, '%(title)s.%(ext)s')
     ydl_opts = {
         'format': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]', 
@@ -158,14 +135,24 @@ def download_file_from_url(url, output_path):
             f.write(chunk)
     return output_path
 
+def save_uploaded_file_chunked(uploaded_file, destination_path):
+    """Writes large uploaded files to disk in chunks to save RAM."""
+    try:
+        with open(destination_path, "wb") as f:
+            while True:
+                chunk = uploaded_file.read(4 * 1024 * 1024) # 4MB chunks
+                if not chunk: break
+                f.write(chunk)
+    finally:
+        # CRITICAL FOR SERVER: Free up the RAM immediately
+        uploaded_file = None
+        gc.collect()
+    return destination_path
+
 def upload_to_gemini(file_path, mime_type=None):
-    """Uploads file to backend and waits for processing."""
     file = genai.upload_file(file_path, mime_type=mime_type)
-    
-    # Custom Progress UI
     progress_bar = st.progress(0)
     status_text = st.empty()
-    
     status_text.markdown("**Encrypting & Uploading Media to Neural Engine...**")
     
     while file.state.name == "PROCESSING":
@@ -183,7 +170,6 @@ def upload_to_gemini(file_path, mime_type=None):
 
 def analyze_content(file_obj):
     model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-    
     prompt = """
     Act as an elite Viral Content Strategist. Analyze this video for:
     1. High-Engagement Expressions (Shock, Laughter, Debate).
@@ -204,22 +190,18 @@ def analyze_content(file_obj):
     }
     Provide exactly 3 shorts, 1 hook, 1 trailer.
     """
-    
     response = model.generate_content(
         [file_obj, prompt],
         generation_config={"response_mime_type": "application/json"}
     )
     return json.loads(response.text)
 
-# --- UI COMPONENTS ---
-
 def render_hero():
     st.markdown("""
         <div style="text-align: center; padding: 40px 0;">
             <h1 class="main-header">ViralPod AI</h1>
             <p style="font-size: 1.2rem; color: #94a3b8; max-width: 600px; margin: 0 auto;">
-                Next-Gen Content Intelligence. Turn long-form video into viral assets 
-                using computer vision and audio analysis.
+                Next-Gen Content Intelligence. Turn long-form video into viral assets.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -253,30 +235,29 @@ def main():
     
     render_hero()
 
-    # Layout: Center the input area
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        # Custom container for inputs
         st.markdown('<div style="background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;">', unsafe_allow_html=True)
-        
         tab_url, tab_upload = st.tabs(["🔗 Link Input", "📂 File Upload"])
         
-        source_path = None
         media_source = None
         url_input = None
         uploaded_file = None
 
         with tab_url:
+            st.markdown("<div style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;'>✅ <b>Recommended for Large Files (>1GB)</b> to avoid Server Timeouts.</div>", unsafe_allow_html=True)
             url_input = st.text_input("YouTube / Drive / Dropbox URL", placeholder="https://...")
             if url_input: media_source = "url"
 
         with tab_upload:
+            st.markdown("<div style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;'>⚠️ Server Upload Limit: 5GB. For faster processing, use Link Input.</div>", unsafe_allow_html=True)
+            # File uploader with no explicit argument limit (handled by config.toml)
             uploaded_file = st.file_uploader("Upload Video", type=["mp4", "mov", "mp3", "m4a"], label_visibility="collapsed")
             if uploaded_file: media_source = "upload"
         
         st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True) # Spacer
+        st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True)
         
         process_btn = st.button("🚀 IGNITE ENGINE", type="primary")
 
@@ -293,17 +274,18 @@ def main():
             # --- PHASE 1: INGESTION ---
             with st.status("Initializing Neural Ingestion...", expanded=True) as status:
                 st.write("Establishing secure connection...")
+                
                 if media_source == "upload":
                     downloaded_file_path = temp_dir / sanitize_filename(uploaded_file.name)
-                    with open(downloaded_file_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
+                    # Use memory-safe chunked saving
+                    save_uploaded_file_chunked(uploaded_file, downloaded_file_path)
+                    
                 elif media_source == "url":
                     if "youtube" in url_input or "youtu.be" in url_input:
                         st.write("Extracting stream from YouTube...")
                         downloaded_file_path = download_youtube_video(url_input, str(temp_dir))
                     elif "drive.google.com" in url_input:
                         st.write("Authenticating Google Drive link...")
-                        # ... (Existing Drive Logic) ...
                         if "id=" in url_input: file_id = url_input.split("id=")[1].split("&")[0]
                         elif "/d/" in url_input: file_id = url_input.split("/d/")[1].split("/")[0]
                         else: file_id = None
@@ -335,13 +317,10 @@ def main():
             st.markdown("<br><hr style='border-color: #334155'><br>", unsafe_allow_html=True)
             st.markdown("<h2 style='text-align: center; color: white;'>✨ Viral Candidates Identified</h2><br>", unsafe_allow_html=True)
 
-            # Layout: Hook and Trailer side by side, Shorts below
             r_col1, r_col2 = st.columns(2)
-            
             with r_col1:
                 h = result_json.get('hook_intro', {})
                 st.markdown(render_result_card(h.get('title'), f"{h.get('start')} - {h.get('end')}", h.get('viral_score'), h.get('reasoning'), "HOOK"), unsafe_allow_html=True)
-            
             with r_col2:
                 t = result_json.get('trailer_segment', {})
                 st.markdown(render_result_card(t.get('title'), f"{t.get('start')} - {t.get('end')}", t.get('viral_score'), t.get('reasoning'), "TRAILER"), unsafe_allow_html=True)
@@ -350,14 +329,12 @@ def main():
             
             shorts = result_json.get("viral_shorts", [])
             s_col1, s_col2, s_col3 = st.columns(3)
-            
             for i, clip in enumerate(shorts):
                 html = render_result_card(clip.get('title'), f"{clip.get('start')} - {clip.get('end')}", clip.get('viral_score'), clip.get('reasoning'), f"SHORT #{i+1}")
                 if i == 0: s_col1.markdown(html, unsafe_allow_html=True)
                 elif i == 1: s_col2.markdown(html, unsafe_allow_html=True)
                 elif i == 2: s_col3.markdown(html, unsafe_allow_html=True)
 
-            # Cleanup
             try: os.remove(downloaded_file_path)
             except: pass
 
