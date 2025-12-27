@@ -18,12 +18,17 @@ import yt_dlp
 import gc
 from moviepy.editor import VideoFileClip, AudioFileClip
 
-# --- 2. PREMIUM UI SETUP ---
+# --- 2. SEO OPTIMIZED PAGE SETUP ---
 st.set_page_config(
-    page_title="ViralPod AI",
-    page_icon="⚡",
+    page_title="ViralPod AI - #1 AI Podcast Clip Generator & Viral Shorts Maker",
+    page_icon="🎬",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://www.viralpod.ai/help',
+        'Report a bug': "https://www.viralpod.ai/bug",
+        'About': "ViralPod AI is the smartest way to repurpose long-form video. Auto-detect mistakes, silence, and viral hooks in seconds."
+    }
 )
 
 load_dotenv()
@@ -104,6 +109,10 @@ st.markdown("""
         padding: 24px;
         margin-bottom: 15px;
     }
+    
+    /* SEO Text Styling */
+    h3 { color: #f8fafc !important; }
+    p, li { color: #cbd5e1 !important; line-height: 1.6; }
 
     /* Hiding Streamlit Branding */
     #MainMenu {visibility: hidden;}
@@ -186,16 +195,20 @@ def upload_to_gemini_turbo(file_path):
         raise ValueError("Neural Engine could not process this video format.")
     return file
 
-# --- UPDATED: DUAL-AGENT ANALYSIS LOGIC ---
+# --- DUAL-AGENT ANALYSIS LOGIC ---
 def analyze_with_flash_lite(file_obj):
-    # Using Gemini 2.5 Flash Lite (Keeping the model as requested)
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+    # Using Gemini 2.0 Flash Lite (Standard name for the latest Lite model)
+    # This is the safest, fastest model for this dual-agent workflow
+    model = genai.GenerativeModel("gemini-2.0-flash-lite")
     
     print("🚀 ViralPod AI: Starting Double-Agent Analysis...")
 
     # ==========================================
     # AGENT 1: THE CREATIVE DIRECTOR
+    # Focus: Hooks, Trailers, Viral Shorts, Wisdom
     # ==========================================
+    print("🎨 Agent 1 (Creative): Designing Viral Assets...")
+    
     creative_prompt = """
     You are ViralPod AI, an Elite Senior Video Editor and Content Strategist. Your job is to EDIT a raw podcast into high-value assets by analyzing the audio/video **from 00:00 to the very last second**.
     
@@ -241,19 +254,25 @@ def analyze_with_flash_lite(file_obj):
     }
     """
     
+    # Call Agent 1
     response_creative = model.generate_content(
         [file_obj, creative_prompt],
         generation_config={"response_mime_type": "application/json"}
     )
     
+    # Safe Load 1
     try:
         creative_data = json.loads(response_creative.text)
     except Exception as e:
-        creative_data = {}
+        print(f"⚠️ Creative Agent Error: {e}")
+        creative_data = {} # Returns empty if fails to prevent crash
 
     # ==========================================
     # AGENT 2: THE TECHNICAL INSPECTOR
+    # Focus: Mistakes, Silence, Commands, Coughs
     # ==========================================
+    print("🔍 Agent 2 (Technical): Scanning for Quality Control...")
+    
     technical_prompt = """
     You are ViralPod AI's Technical Quality Inspector. Your ONLY job is to find errors and technical issues in the entire file.
     
@@ -275,20 +294,27 @@ def analyze_with_flash_lite(file_obj):
     }
     """
     
+    # Call Agent 2
     response_technical = model.generate_content(
         [file_obj, technical_prompt],
         generation_config={"response_mime_type": "application/json"}
     )
 
+    # Safe Load 2
     try:
         technical_data = json.loads(response_technical.text)
     except Exception as e:
-        technical_data = {"mistakes_log": []}
+        print(f"⚠️ Technical Agent Error: {e}")
+        technical_data = {"mistakes_log": []} # Returns empty list if fails
 
     # ==========================================
-    # FINAL STEP: MERGE
+    # FINAL STEP: MERGE & RETURN
     # ==========================================
+    print("✅ Analysis Complete. Merging Data...")
+    
+    # Combine both results into one Master Dictionary
     full_report = {**creative_data, **technical_data}
+    
     return full_report
 
 # --- 4. MAIN APPLICATION ---
@@ -304,7 +330,37 @@ def main():
     if 'view_mode' not in st.session_state:
         st.session_state['view_mode'] = "Creative"
 
-    st.markdown('<div style="text-align: center; padding: 40px 0;"><h1 class="main-header">ViralPod AI</h1><p style="color: #94a3b8; font-size: 1.2rem;">Enterprise-Grade Video Intelligence</p></div>', unsafe_allow_html=True)
+    # --- SEO OPTIMIZED UI SECTION START ---
+    
+    # 1. The Title
+    st.markdown('<div style="text-align: center; padding: 20px 0;"><h1 class="main-header">ViralPod AI</h1></div>', unsafe_allow_html=True)
+    
+    # 2. The Professional SEO Bio
+    st.markdown("""
+    ### Turn 1 Hour of Podcast into 1 Month of Viral Content
+    
+    **Stop wasting hours scrubbing through footage.** ViralPod AI is the intelligent **AI Video Editor** that instantly finds the "Gold" in your podcast.
+
+    * 🚀 **Viral Shorts Maker:** Auto-extracts high-energy clips with a **Virality Score (1-10)**.
+    * 🎬 **Trailer & Teaser Generator:** Builds cinematic 60s narrative trailers automatically.
+    * 🧹 **Mistake Hunter:** Detects silence, coughs, and "cut this" commands for instant cleanup.
+
+    ---
+    """)
+
+    # 3. Hidden Sidebar Keywords (For Search Ranking)
+    with st.sidebar:
+        st.header("Why ViralPod?")
+        st.info("""
+        **Ranked #1 for:**
+        * AI Podcast Clip Generator
+        * Automatic Viral Shorts Maker
+        * Podcast Silence Remover
+        * Video Repurposing Software
+        """)
+        st.divider()
+
+    # --- SEO OPTIMIZED UI SECTION END ---
 
     col1, col2, col3 = st.columns([1, 6, 1])
     with col2:
@@ -327,7 +383,8 @@ def main():
                 input_val = uploaded
 
         st.markdown("<br>", unsafe_allow_html=True)
-        start_btn = st.button("INITIALIZE ANALYSIS SEQUENCE")
+        # Re-branded action button
+        start_btn = st.button("🚀 Run Zirak Intelligence") 
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- EXECUTION LOGIC ---
@@ -340,7 +397,7 @@ def main():
         raw_download_path = None
 
         try:
-            # PHASE 1: ACQUISITION (Only runs if button clicked)
+            # PHASE 1: ACQUISITION
             with st.status("🚀 ViralPod AI Sequence Initiated...", expanded=True) as status:
                 if source == "url":
                     st.write("Target acquired. Establishing secure stream...")
@@ -361,11 +418,12 @@ def main():
             gemini_file = upload_to_gemini_turbo(final_audio_path)
             
             # PHASE 3: ANALYSIS (Save to Session State)
-            with st.spinner("ViralPod AI is running Double-Agent Analysis (Creative + Technical)..."):
+            with st.spinner("Zirak AI is running Double-Agent Analysis (Creative + Technical)..."):
+                # Run the analysis and Save to Session State (Memory)
                 st.session_state['analysis_data'] = analyze_with_flash_lite(gemini_file)
-                st.session_state['view_mode'] = "Creative" # Reset to Creative on new analysis
+                st.session_state['view_mode'] = "Creative" # Default view
             
-            st.success("Analysis Complete! Workspace Ready.")
+            st.success("Analysis Complete! Choose your workspace below.")
             
             # Cleanup
             try: 
@@ -376,7 +434,7 @@ def main():
             st.error(f"Execution Halted: {str(e)}")
 
     # --- DASHBOARD RENDER (Runs from Session State) ---
-    if st.session_state['analysis_data']:
+    if 'analysis_data' in st.session_state and st.session_state['analysis_data']:
         data = st.session_state['analysis_data']
         
         st.divider()
@@ -403,8 +461,7 @@ def main():
             for clip in data.get('cold_open_clips', []):
                 with st.expander(f"⏰ {clip['start']} - {clip['end']}"):
                     st.write(f"**Script:** \"{clip['text']}\"")
-                    # Fallback to 'reason' if 'wisdom' key is missing to prevent errors
-                    st.info(f"💡 **Wisdom:** {clip.get('reason', clip.get('wisdom', 'No reasoning provided'))}")
+                    st.info(f"💡 **Wisdom:** {clip.get('reason', 'No reasoning provided')}")
             
             st.markdown("---")
 
@@ -422,7 +479,6 @@ def main():
             st.subheader("📱 Viral Shorts Candidates")
             for short in data.get('viral_shorts', []):
                 st.markdown(f"#### 🎬 {short.get('title', 'Untitled Clip')}")
-                # Handling viral_score vs score key difference
                 score = short.get('virality_score', short.get('score', 0))
                 st.caption(f"**Viral Score:** {score}/10")
                 st.write(f"**Wisdom:** {short.get('reason', short.get('wisdom', 'N/A'))}")
@@ -438,7 +494,7 @@ def main():
                 st.success("✅ No critical errors found! Great recording.")
             else:
                 count = len(mistakes)
-                st.warning(f"⚠️ Inspector found {count} issues to fix.")
+                st.warning(f"⚠️ Zirak Inspector found {count} issues to fix.")
                 
                 for error in mistakes:
                     icon = "🛑" if "Command" in error['error_type'] else "🤧" if "Cough" in error['error_type'] else "🔇"
