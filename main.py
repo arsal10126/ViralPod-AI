@@ -51,7 +51,7 @@ st.markdown("""
         text-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
     }
 
-    /* Input Container Styling */
+    /* Input Container */
     .input-container {
         background: rgba(15, 23, 42, 0.6);
         backdrop-filter: blur(20px);
@@ -62,7 +62,7 @@ st.markdown("""
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
 
-    /* Clean Input Fields */
+    /* Inputs */
     .stTextInput > div > div > input {
         background-color: #0f172a !important;
         color: #e2e8f0 !important;
@@ -70,14 +70,13 @@ st.markdown("""
         border-radius: 12px;
         padding: 15px;
         font-size: 1rem;
-        transition: all 0.2s;
     }
     .stTextInput > div > div > input:focus {
         border-color: #818cf8 !important;
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
     }
 
-    /* Button Styling */
+    /* Buttons */
     .stButton > button {
         background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
         color: white;
@@ -96,44 +95,20 @@ st.markdown("""
         box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.5);
     }
 
-    /* Result Cards */
+    /* UI Cards */
     .glass-card {
         background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 20px;
         padding: 24px;
-        height: 100%;
-        transition: transform 0.2s ease;
-        position: relative;
-        overflow: hidden;
+        margin-bottom: 15px;
     }
-    .glass-card:hover {
-        transform: translateY(-5px);
-        border-color: rgba(139, 92, 246, 0.5);
-        box-shadow: 0 10px 40px -10px rgba(139, 92, 246, 0.2);
-    }
-
-    /* Badges */
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 4px 12px;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .badge-purple { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
-    .badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-red { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
 
     /* Hiding Streamlit Branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
 </style>
 """, unsafe_allow_html=True)
 
@@ -156,7 +131,6 @@ def convert_to_audio_optimized(input_path):
         if str(input_path).endswith((".mp3", ".m4a", ".wav")):
             return input_path
         audio_clip = AudioFileClip(str(input_path))
-        # 64k bitrate is sufficient for vocal analysis, speeds up upload
         audio_clip.write_audiofile(output_path, bitrate="64k", logger=None)
         audio_clip.close()
         if os.path.exists(input_path): os.remove(input_path) 
@@ -212,12 +186,17 @@ def upload_to_gemini_turbo(file_path):
         raise ValueError("Neural Engine could not process this video format.")
     return file
 
+# --- UPDATED: DUAL-AGENT ANALYSIS LOGIC ---
 def analyze_with_flash_lite(file_obj):
-    # Using Gemini 2.5 Flash Lite as requested for maximum speed
+    # Using Gemini 2.5 Flash Lite (Keeping the model as requested)
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
-    # ENHANCED PROMPT (Based on "Zirak AI" Master Prompt but branded for ViralPod AI)
-    prompt = """
+    print("🚀 ViralPod AI: Starting Double-Agent Analysis...")
+
+    # ==========================================
+    # AGENT 1: THE CREATIVE DIRECTOR
+    # ==========================================
+    creative_prompt = """
     You are ViralPod AI, an Elite Senior Video Editor and Content Strategist. Your job is to EDIT a raw podcast into high-value assets by analyzing the audio/video **from 00:00 to the very last second**.
     
     ### CORE ANALYSIS PROTOCOL (STRICT):
@@ -248,12 +227,6 @@ def analyze_with_flash_lite(file_obj):
        - **Viral Score:** You must assign a score from **1-10** (10 being absolutely viral).
        - **Wisdom:** Detailed reasoning is required. Why did you select this? Is it a "Knowledge Bomb"? Is it a "Controversial Take"? Explain the viral psychology.
     
-    **4. The 'Mistake Hunter' (Quality Control)**
-       - Identify errors to be removed.
-       - **Long Silence:** Dead air > 7 seconds.
-       - **Audio Disturbances:** Coughing ("Khansi"), sneezing, loud throat clearing.
-       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake).
-    
     ### OUTPUT SCHEMA (JSON ONLY - NO MARKDOWN):
     {
       "cold_open_clips": [
@@ -264,17 +237,59 @@ def analyze_with_flash_lite(file_obj):
       ],
       "viral_shorts": [
         {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "virality_score": "9/10", "reason": "Detailed viral psychology analysis. Why this clip will stop the scroll."}
-      ],
+      ]
+    }
+    """
+    
+    response_creative = model.generate_content(
+        [file_obj, creative_prompt],
+        generation_config={"response_mime_type": "application/json"}
+    )
+    
+    try:
+        creative_data = json.loads(response_creative.text)
+    except Exception as e:
+        creative_data = {}
+
+    # ==========================================
+    # AGENT 2: THE TECHNICAL INSPECTOR
+    # ==========================================
+    technical_prompt = """
+    You are ViralPod AI's Technical Quality Inspector. Your ONLY job is to find errors and technical issues in the entire file.
+    
+    ### CORE ANALYSIS PROTOCOL (STRICT):
+    1. **FULL SPECTRUM SCAN:** Analyze from 00:00 to End.
+    2. **STRICT TIMESTAMPS:** Exact MM:SS format.
+    
+    ### DELIVERABLE: The 'Mistake Hunter' (Quality Control)
+       - Identify errors to be removed.
+       - **Long Silence:** Dead air > 7 seconds.
+       - **Audio Disturbances:** Coughing ("Khansi"), sneezing, loud throat clearing.
+       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake).
+    
+    ### OUTPUT SCHEMA (JSON ONLY - NO MARKDOWN):
+    {
       "mistakes_log": [
         {"timestamp": "MM:SS", "error_type": "Silence/Cough/Command", "description": "Speaker coughed/Asked to cut"}
       ]
     }
     """
-    response = model.generate_content(
-        [file_obj, prompt],
+    
+    response_technical = model.generate_content(
+        [file_obj, technical_prompt],
         generation_config={"response_mime_type": "application/json"}
     )
-    return json.loads(response.text)
+
+    try:
+        technical_data = json.loads(response_technical.text)
+    except Exception as e:
+        technical_data = {"mistakes_log": []}
+
+    # ==========================================
+    # FINAL STEP: MERGE
+    # ==========================================
+    full_report = {**creative_data, **technical_data}
+    return full_report
 
 # --- 4. MAIN APPLICATION ---
 
@@ -282,6 +297,12 @@ def main():
     api_key = get_api_key()
     if api_key: genai.configure(api_key=api_key)
     else: st.warning("⚠️ System Key Missing")
+
+    # Initialize Session State Variables to prevent crash
+    if 'analysis_data' not in st.session_state:
+        st.session_state['analysis_data'] = None
+    if 'view_mode' not in st.session_state:
+        st.session_state['view_mode'] = "Creative"
 
     st.markdown('<div style="text-align: center; padding: 40px 0;"><h1 class="main-header">ViralPod AI</h1><p style="color: #94a3b8; font-size: 1.2rem;">Enterprise-Grade Video Intelligence</p></div>', unsafe_allow_html=True)
 
@@ -309,6 +330,7 @@ def main():
         start_btn = st.button("INITIALIZE ANALYSIS SEQUENCE")
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # --- EXECUTION LOGIC ---
     if start_btn and input_val:
         if not api_key: st.error("Authorization Failed"); return
 
@@ -318,123 +340,119 @@ def main():
         raw_download_path = None
 
         try:
-            # --- PHASE 1: ACQUISITION ---
+            # PHASE 1: ACQUISITION (Only runs if button clicked)
             with st.status("🚀 ViralPod AI Sequence Initiated...", expanded=True) as status:
-                
                 if source == "url":
                     st.write("Target acquired. Establishing secure stream...")
                     raw_download_path = smart_downloader(input_val, str(temp_dir))
                     st.write("Stream captured successfully.")
-                
                 elif source == "upload":
                     st.write("Verifying file integrity...")
                     raw_download_path = temp_dir / sanitize_filename(input_val.name)
                     save_uploaded_chunked(input_val, raw_download_path)
-                    st.write("Upload buffered to secure storage.")
+                    st.write("Upload buffered.")
 
                 st.write("Optimizing video data for Neural Engine...")
                 final_audio_path = convert_to_audio_optimized(raw_download_path)
-                
                 status.update(label="Ingestion Complete", state="complete")
 
-            # --- PHASE 2: PROCESSING ---
+            # PHASE 2: PROCESSING
             st.toast("ViralPod AI is uploading your content to the Neural Engine...", icon="☁️")
             gemini_file = upload_to_gemini_turbo(final_audio_path)
             
-            # --- PHASE 3: ANALYSIS ---
-            with st.spinner("ViralPod AI is analyzing your video... (This may take up to 5 minutes depending on duration)"):
-                data = analyze_with_flash_lite(gemini_file)
-
-            # --- PHASE 4: RESULTS RENDER ---
-            st.markdown("<br><br>", unsafe_allow_html=True)
+            # PHASE 3: ANALYSIS (Save to Session State)
+            with st.spinner("ViralPod AI is running Double-Agent Analysis (Creative + Technical)..."):
+                st.session_state['analysis_data'] = analyze_with_flash_lite(gemini_file)
+                st.session_state['view_mode'] = "Creative" # Reset to Creative on new analysis
             
-            # --- COLD OPEN CLIPS ---
-            st.markdown("<h3 style='color: white;'>🔥 The Cold Open (Teaser Hooks)</h3>", unsafe_allow_html=True)
-            cold_opens = data.get('cold_open_clips', [])
-            if cold_opens:
-                for clip in cold_opens:
-                    st.markdown(f"""
-                    <div class="glass-card" style="margin-bottom: 10px; padding: 15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="badge badge-purple">HOOK CLIP</span>
-                            <span style="font-family:monospace; color:#94a3b8; font-weight:bold;">{clip.get('start')} - {clip.get('end')}</span>
-                        </div>
-                        <p style="color:#e2e8f0; margin-top:10px; font-style:italic;">"{clip.get('text')}"</p>
-                        <p style="color:#94a3b8; font-size:0.85rem; margin-top:8px; border-left: 2px solid #a855f7; padding-left: 10px;">
-                            <strong style="color: #c4b5fd;">Editorial Wisdom:</strong> {clip.get('reason')}
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("No clear cold open hooks found.")
-
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            # --- TRAILER STRUCTURE ---
-            st.markdown("<h3 style='color: white;'>🎬 Cinematic Trailer Arc</h3>", unsafe_allow_html=True)
-            trailer_seq = data.get('trailer_structure', [])
-            if trailer_seq:
-                for clip in trailer_seq:
-                    st.markdown(f"""
-                    <div class="glass-card" style="margin-bottom: 10px; padding: 15px; border-left: 3px solid #f472b6;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="color: #f472b6; font-weight:bold; font-size:0.8rem;">{clip.get('narrative_role', 'Clip').upper()}</span>
-                            <span style="font-family:monospace; color:#94a3b8;">{clip.get('start')} - {clip.get('end')}</span>
-                        </div>
-                        <p style="color:#cbd5e1; margin-top:5px;">{clip.get('text')}</p>
-                        <p style="color:#94a3b8; font-size:0.8rem; margin-top:5px;"><i>{clip.get('reason')}</i></p>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("Insufficient data for trailer generation.")
-
-            # --- VIRAL SHORTS ---
-            st.markdown("<h3 style='margin-top:40px; text-align:center; color:white;'>📱 Viral Shorts Candidates</h3>", unsafe_allow_html=True)
-            shorts = data.get('viral_shorts', [])
-            if shorts:
-                cols = st.columns(3)
-                for i, clip in enumerate(shorts):
-                    col_idx = i % 3
-                    with cols[col_idx]:
-                        st.markdown(f"""
-                        <div class="glass-card">
-                            <div style="display:flex; justify-content:space-between;">
-                                <span class="badge badge-green">SHORT #{i+1}</span>
-                                <span style="font-family:monospace; color:#94a3b8;">{clip.get('start')}</span>
-                            </div>
-                            <h4 style="margin-top:10px; font-weight:600; color:white;">{clip.get('title')}</h4>
-                            <p style="color:#94a3b8; font-size:0.85rem; margin-top:10px;">
-                                <strong style="color: #6ee7b7;">Why Viral?</strong> {clip.get('reason')}
-                            </p>
-                            <div style="margin-top:10px; font-weight:700; color:#fff;">Score: {clip.get('virality_score')}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-            # --- MISTAKES LOG ---
-            st.markdown("<br><hr style='border-color: #334155'><br>", unsafe_allow_html=True)
-            st.markdown("<h3 style='color: #ef4444;'>🛠️ The Mistake Hunter Log</h3>", unsafe_allow_html=True)
+            st.success("Analysis Complete! Workspace Ready.")
             
-            mistakes = data.get('mistakes_log', [])
-            if mistakes:
-                for error in mistakes:
-                    st.markdown(f"""
-                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <span class="badge badge-red">{error.get('error_type')}</span>
-                            <span style="color: #fca5a5; margin-left: 10px;">{error.get('description')}</span>
-                        </div>
-                        <span style="font-family:monospace; color:#fca5a5; font-weight:bold;">{error.get('timestamp')}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.success("No major technical errors detected.")
-
+            # Cleanup
             try: 
                 if final_audio_path: os.remove(final_audio_path)
             except: pass
 
         except Exception as e:
             st.error(f"Execution Halted: {str(e)}")
+
+    # --- DASHBOARD RENDER (Runs from Session State) ---
+    if st.session_state['analysis_data']:
+        data = st.session_state['analysis_data']
+        
+        st.divider()
+        
+        # 1. THE "TWO BUTTONS" INTERFACE
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Get Viral Assets (Intro, Shorts)", use_container_width=True):
+                st.session_state['view_mode'] = "Creative"
+        with col2:
+            if st.button("🛠️ Fix Mistakes (Silence, Errors)", use_container_width=True):
+                st.session_state['view_mode'] = "Technical"
+
+        st.divider()
+
+        # 2. CONDITIONAL DISPLAY
+        
+        # --- OPTION 1: CREATIVE MODE ---
+        if st.session_state['view_mode'] == "Creative":
+            st.header("✨ Creative Studio")
+            
+            # A. Cold Open
+            st.subheader("🔥 Cold Open Teaser (0-30s)")
+            for clip in data.get('cold_open_clips', []):
+                with st.expander(f"⏰ {clip['start']} - {clip['end']}"):
+                    st.write(f"**Script:** \"{clip['text']}\"")
+                    # Fallback to 'reason' if 'wisdom' key is missing to prevent errors
+                    st.info(f"💡 **Wisdom:** {clip.get('reason', clip.get('wisdom', 'No reasoning provided'))}")
+            
+            st.markdown("---")
+
+            # B. Trailer
+            st.subheader("🎬 Movie Trailer Arc")
+            for clip in data.get('trailer_structure', []):
+                with st.container(border=True):
+                    st.write(f"**{clip.get('narrative_role', 'Clip')}** ({clip['start']} - {clip['end']})")
+                    st.caption(f"\"{clip['text']}\"")
+                    st.write(f"*Why:* {clip.get('reason', 'N/A')}")
+
+            st.markdown("---")
+
+            # C. Viral Shorts
+            st.subheader("📱 Viral Shorts Candidates")
+            for short in data.get('viral_shorts', []):
+                st.markdown(f"#### 🎬 {short.get('title', 'Untitled Clip')}")
+                # Handling viral_score vs score key difference
+                score = short.get('virality_score', short.get('score', 0))
+                st.caption(f"**Viral Score:** {score}/10")
+                st.write(f"**Wisdom:** {short.get('reason', short.get('wisdom', 'N/A'))}")
+                st.code(f"Cut: {short['start']} --> {short['end']}")
+                st.markdown("---")
+
+        # --- OPTION 2: TECHNICAL MODE ---
+        elif st.session_state['view_mode'] == "Technical":
+            st.header("🛠️ Quality Control Room")
+            
+            mistakes = data.get('mistakes_log', [])
+            if not mistakes:
+                st.success("✅ No critical errors found! Great recording.")
+            else:
+                count = len(mistakes)
+                st.warning(f"⚠️ Inspector found {count} issues to fix.")
+                
+                for error in mistakes:
+                    icon = "🛑" if "Command" in error['error_type'] else "🤧" if "Cough" in error['error_type'] else "🔇"
+                    
+                    with st.container(border=True):
+                        c1, c2 = st.columns([1, 4])
+                        with c1:
+                            st.markdown(f"## {icon}")
+                            st.caption(error['timestamp'])
+                        with c2:
+                            st.subheader(error['error_type'])
+                            st.write(error['description'])
+                            # Fake "Fix" button for UI demo
+                            st.button("Mark Fixed", key=f"fix_{error['timestamp']}")
 
 if __name__ == "__main__":
     main()
