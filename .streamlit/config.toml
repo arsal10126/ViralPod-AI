@@ -1,5 +1,5 @@
 [server]
-maxUploadSize = 5000
+maxUploadSize = 10000  # <--- Changed from 5000 to 10000 to support your 8GB files
 enableCORS = false
 enableXsrfProtection = false
 
