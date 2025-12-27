@@ -1,6 +1,8 @@
 import os
 
-# --- 1 server Configuration removed from below!
+# ❌ REMOVED LINES 4-7 (Server Config) 
+# These lines cause the Black Screen on Cloud. 
+# Your .streamlit/config.toml file handles the 10GB limit safely now.
 
 import streamlit as st
 import time
@@ -30,12 +32,13 @@ st.set_page_config(
 
 load_dotenv()
 
-# High-Tech "Silicon Valley" CSS Injection
+# High-Tech "Silicon Valley" CSS Injection (FIXED & SAFE MODE)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap');
     
-    html, body, [class*="css"] { 
+    /* ✅ FIX: Changed from '[class*="css"]' to '.stApp' to prevent Black Screen */
+    .stApp { 
         font-family: 'Inter', sans-serif; 
         background-color: #020617; 
         color: #f8fafc;
@@ -64,8 +67,8 @@ st.markdown("""
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
 
-    /* Inputs */
-    .stTextInput > div > div > input {
+    /* Inputs - Updated Selector for Stability */
+    .stTextInput input {
         background-color: #0f172a !important;
         color: #e2e8f0 !important;
         border: 1px solid #334155 !important;
@@ -73,7 +76,7 @@ st.markdown("""
         padding: 15px;
         font-size: 1rem;
     }
-    .stTextInput > div > div > input:focus {
+    .stTextInput input:focus {
         border-color: #818cf8 !important;
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
     }
@@ -487,11 +490,5 @@ def main():
                         
                         with c1:
                             st.markdown(f"## {icon}")
-                            # Display the Time Range clearly
-                            st.markdown(f"**{start_time}**")
-                            st.caption("⬇ to")
-                            st.markdown(f"**{end_time}**")
-                            
-                        with c2:
-                            st.subheader(error.get('error_type', 'Unknown Error'))
-     
+                            # Display the Time
+    
