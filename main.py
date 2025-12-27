@@ -18,12 +18,18 @@ import yt_dlp
 import gc
 from moviepy.editor import VideoFileClip, AudioFileClip
 
-# --- 2. PREMIUM UI SETUP ---
+# --- 2. SEO & PREMIUM UI SETUP ---
+# (This must be the first Streamlit command)
 st.set_page_config(
-    page_title="ViralPod AI",
-    page_icon="⚡",
+    page_title="ViralPod AI - #1 AI Podcast Clip Generator & Viral Shorts Maker",
+    page_icon="🎬",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://www.viralpod.ai/help',
+        'Report a bug': "https://www.viralpod.ai/bug",
+        'About': "ViralPod AI is the smartest way to repurpose long-form video. Auto-detect mistakes, silence, and viral hooks in seconds."
+    }
 )
 
 load_dotenv()
@@ -306,7 +312,37 @@ def main():
     if 'view_mode' not in st.session_state:
         st.session_state['view_mode'] = "Creative"
 
-    st.markdown('<div style="text-align: center; padding: 40px 0;"><h1 class="main-header">ViralPod AI</h1><p style="color: #94a3b8; font-size: 1.2rem;">Enterprise-Grade Video Intelligence</p></div>', unsafe_allow_html=True)
+    # --- SEO OPTIMIZED UI SECTION START ---
+    
+    # 1. The Title
+    st.markdown('<div style="text-align: center; padding: 20px 0;"><h1 class="main-header">ViralPod AI</h1></div>', unsafe_allow_html=True)
+    
+    # 2. The Professional SEO Bio (Inserted here)
+    st.markdown("""
+    ### Turn 1 Hour of Podcast into 1 Month of Viral Content
+    
+    **Stop wasting hours scrubbing through footage.** ViralPod AI is the intelligent **AI Video Editor** that instantly finds the "Gold" in your podcast.
+
+    * 🚀 **Viral Shorts Maker:** Auto-extracts high-energy clips with a **Virality Score (1-10)**.
+    * 🎬 **Trailer & Teaser Generator:** Builds cinematic 60s narrative trailers automatically.
+    * 🧹 **Mistake Hunter:** Detects silence, coughs, and "cut this" commands for instant cleanup.
+
+    ---
+    """)
+
+    # 3. Hidden Sidebar Keywords
+    with st.sidebar:
+        st.header("Why ViralPod?")
+        st.info("""
+        **Ranked #1 for:**
+        * AI Podcast Clip Generator
+        * Automatic Viral Shorts Maker
+        * Podcast Silence Remover
+        * Video Repurposing Software
+        """)
+        st.divider()
+
+    # --- SEO OPTIMIZED UI SECTION END ---
 
     col1, col2, col3 = st.columns([1, 6, 1])
     with col2:
@@ -432,41 +468,34 @@ def main():
                 st.markdown("---")
 
         # --- OPTION 2: TECHNICAL MODE ---
-            elif st.session_state['view_mode'] == "Technical":
-        st.header("🛠️ Quality Control Room")
-        
-        mistakes = data.get('mistakes_log', [])
-        if not mistakes:
-            st.success("✅ No critical errors found! Great recording.")
-        else:
-            count = len(mistakes)
-            st.warning(f"⚠️ Inspector found {count} issues to fix.")
+        elif st.session_state['view_mode'] == "Technical":
+            st.header("🛠️ Quality Control Room")
             
-            for error in mistakes:
-                # Determine Icon based on error type
-                icon = "🛑" if "Command" in error.get('error_type', '') else "🤧" if "Cough" in error.get('error_type', '') else "🔇"
+            mistakes = data.get('mistakes_log', [])
+            if not mistakes:
+                st.success("✅ No critical errors found! Great recording.")
+            else:
+                count = len(mistakes)
+                st.warning(f"⚠️ Inspector found {count} issues to fix.")
                 
-                # Get timestamps safely
-                start_time = error.get('start', '00:00')
-                end_time = error.get('end', '00:00')
-                
-                with st.container(border=True):
-                    c1, c2 = st.columns([1, 5]) # Adjusted width for better look
+                for error in mistakes:
+                    # Determine Icon based on error type
+                    icon = "🛑" if "Command" in error.get('error_type', '') else "🤧" if "Cough" in error.get('error_type', '') else "🔇"
                     
-                    with c1:
-                        st.markdown(f"## {icon}")
-                        # Display the Time Range clearly
-                        st.markdown(f"**{start_time}**")
-                        st.caption("⬇ to")
-                        st.markdown(f"**{end_time}**")
+                    # Get timestamps safely
+                    start_time = error.get('start', '00:00')
+                    end_time = error.get('end', '00:00')
+                    
+                    with st.container(border=True):
+                        c1, c2 = st.columns([1, 5]) # Adjusted width for better look
                         
-                    with c2:
-                        st.subheader(error.get('error_type', 'Unknown Error'))
-                        st.write(error.get('description', 'No description'))
-                        
-                        # Fake "Fix" button using the start time as unique ID
-                        if st.button("Mark Fixed", key=f"fix_{start_time}_{end_time}"):
-                            st.toast(f"Fixed error at {start_time}!")
-
-if __name__ == "__main__":
-    main()
+                        with c1:
+                            st.markdown(f"## {icon}")
+                            # Display the Time Range clearly
+                            st.markdown(f"**{start_time}**")
+                            st.caption("⬇ to")
+                            st.markdown(f"**{end_time}**")
+                            
+                        with c2:
+                            st.subheader(error.get('error_type', 'Unknown Error'))
+     
