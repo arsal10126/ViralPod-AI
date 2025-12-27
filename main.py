@@ -224,6 +224,7 @@ def analyze_with_flash_lite(file_obj):
     **3. Viral Shorts/Reels (3-4 Distinct Clips)**
        - Find standalone moments (tiny stories) suitable for TikTok/Reels.
        - Duration: 30s to 60s per clip.
+       - **text:** you must include the transcript text for each clip.
        - **Viral Score:** You must assign a score from **1-10** (10 being absolutely viral).
        - **Wisdom:** Detailed reasoning is required. Why did you select this? Is it a "Knowledge Bomb"? Is it a "Controversial Take"? Explain the viral psychology.
     
@@ -259,13 +260,14 @@ def analyze_with_flash_lite(file_obj):
     
     ### CORE ANALYSIS PROTOCOL (STRICT):
     1. **FULL SPECTRUM SCAN:** Analyze from 00:00 to End.
-    2. **STRICT TIMESTAMPS:** Exact MM:SS format.
+    2. **STRICT TIMESTAMPS:** Exact start and end timestamps MM:SS format.
     
     ### DELIVERABLE: The 'Mistake Hunter' (Quality Control)
        - Identify errors to be removed.
        - **Long Silence:** Dead air > 8 seconds mean no music, no background sounds etc.
        - **Audio Disturbances:** Coughing ("Khansi"), sneezing, loud throat clearing.
-       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake), Repeated sentences for correction etc
+       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake), Repeated sentences for correction etc.
+            You must identify the errors exactly when it STARTS and when it ENDS.
     
     ### OUTPUT SCHEMA (JSON ONLY - NO MARKDOWN):
     {
