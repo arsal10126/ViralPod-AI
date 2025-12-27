@@ -1,10 +1,6 @@
 import os
 
-# --- 1. SERVER CONFIGURATION ---
-os.environ["STREAMLIT_SERVER_MAX_UPLOAD_SIZE"] = "10000"
-os.environ["STREAMLIT_SERVER_ENABLE_CORS"] = "false"
-os.environ["STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION"] = "false"
-os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+# --- 1 server Configuration removed from below!
 
 import streamlit as st
 import time
