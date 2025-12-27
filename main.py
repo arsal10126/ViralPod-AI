@@ -213,7 +213,7 @@ def analyze_with_flash_lite(file_obj):
        - These clips must come from deep inside the conversation.
        - **Wisdom:** Explain why these specific lines will force a viewer to stop scrolling and watch the full episode.
     
-    **2. The Movie Trailer (Total 60-90s)**
+    **2. The Pod Trailer (Total 60-90s)**
        - Select 4-5 clips that build a Story Arc:
          * Clip 1: The Problem/Conflict.
          * Clip 2: The Debate/Argument.
@@ -236,7 +236,7 @@ def analyze_with_flash_lite(file_obj):
         {"start": "MM:SS", "end": "MM:SS", "text": "...", "narrative_role": "Conflict/Climax", "reason": "Wisdom on why this fits the story arc."}
       ],
       "viral_shorts": [
-        {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "virality_score": "9/10", "reason": "Detailed viral psychology analysis. Why this clip will stop the scroll."}
+        {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "text": "text transcript", "virality_score": "9/10", "reason": "Detailed viral psychology analysis. Why this clip will stop the scroll."}
       ]
     }
     """
@@ -263,9 +263,9 @@ def analyze_with_flash_lite(file_obj):
     
     ### DELIVERABLE: The 'Mistake Hunter' (Quality Control)
        - Identify errors to be removed.
-       - **Long Silence:** Dead air > 7 seconds.
+       - **Long Silence:** Dead air > 8 seconds mean no music, no background sounds etc.
        - **Audio Disturbances:** Coughing ("Khansi"), sneezing, loud throat clearing.
-       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake).
+       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake), Repeated sentences for correction etc
     
     ### OUTPUT SCHEMA (JSON ONLY - NO MARKDOWN):
     {
@@ -419,7 +419,7 @@ def main():
             st.markdown("---")
 
             # C. Viral Shorts
-            st.subheader("📱 Viral Shorts Candidates")
+            st.subheader("📱 Viral Short Clips ")
             for short in data.get('viral_shorts', []):
                 st.markdown(f"#### 🎬 {short.get('title', 'Untitled Clip')}")
                 # Handling viral_score vs score key difference
