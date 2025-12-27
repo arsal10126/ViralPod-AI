@@ -1,8 +1,10 @@
 import os
 
-# ❌ REMOVED LINES 4-7 (Server Config) 
-# These lines cause the Black Screen on Cloud. 
-# Your .streamlit/config.toml file handles the 10GB limit safely now.
+# --- 1. SERVER CONFIGURATION ---
+os.environ["STREAMLIT_SERVER_MAX_UPLOAD_SIZE"] = "10000"
+os.environ["STREAMLIT_SERVER_ENABLE_CORS"] = "false"
+os.environ["STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION"] = "false"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 
 import streamlit as st
 import time
@@ -16,29 +18,22 @@ import yt_dlp
 import gc
 from moviepy.editor import VideoFileClip, AudioFileClip
 
-# --- 2. SEO & PREMIUM UI SETUP ---
-# (This must be the first Streamlit command)
+# --- 2. PREMIUM UI SETUP ---
 st.set_page_config(
-    page_title="ViralPod AI - #1 AI Podcast Clip Generator & Viral Shorts Maker",
-    page_icon="🎬",
+    page_title="ViralPod AI",
+    page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://www.viralpod.ai/help',
-        'Report a bug': "https://www.viralpod.ai/bug",
-        'About': "ViralPod AI is the smartest way to repurpose long-form video. Auto-detect mistakes, silence, and viral hooks in seconds."
-    }
+    initial_sidebar_state="collapsed"
 )
 
 load_dotenv()
 
-# High-Tech "Silicon Valley" CSS Injection (FIXED & SAFE MODE)
+# High-Tech "Silicon Valley" CSS Injection
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap');
     
-    /* ✅ FIX: Changed from '[class*="css"]' to '.stApp' to prevent Black Screen */
-    .stApp { 
+    html, body, [class*="css"] { 
         font-family: 'Inter', sans-serif; 
         background-color: #020617; 
         color: #f8fafc;
@@ -67,8 +62,8 @@ st.markdown("""
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
 
-    /* Inputs - Updated Selector for Stability */
-    .stTextInput input {
+    /* Inputs */
+    .stTextInput > div > div > input {
         background-color: #0f172a !important;
         color: #e2e8f0 !important;
         border: 1px solid #334155 !important;
@@ -76,7 +71,7 @@ st.markdown("""
         padding: 15px;
         font-size: 1rem;
     }
-    .stTextInput input:focus {
+    .stTextInput > div > div > input:focus {
         border-color: #818cf8 !important;
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
     }
@@ -214,11 +209,11 @@ def analyze_with_flash_lite(file_obj):
     ### DELIVERABLES:
     
     **1. The "Cold Open" Teaser (Total 30s)**
-       - Find 3 specific, punchy sentences or groups of sentences, minimum total duration must 30 secs long that represent the CLIMAX or SHOCKING MOMENT of the episode.
+       - Find 3 specific, punchy sentences upto total duration 30 secs long that represent the CLIMAX or SHOCKING MOMENT of the episode.
        - These clips must come from deep inside the conversation.
        - **Wisdom:** Explain why these specific lines will force a viewer to stop scrolling and watch the full episode.
     
-    **2. The Pod Trailer (Total 60-90s)**
+    **2. The Movie Trailer (Total 60-90s)**
        - Select 4-5 clips that build a Story Arc:
          * Clip 1: The Problem/Conflict.
          * Clip 2: The Debate/Argument.
@@ -227,9 +222,8 @@ def analyze_with_flash_lite(file_obj):
        - **Wisdom:** Explain how this specific sequence creates suspense.
     
     **3. Viral Shorts/Reels (3-4 Distinct Clips)**
-       - Find standalone moments (tiny stories) suitable for TikTok/Reels.
+       - Find standalone moments suitable for TikTok/Reels.
        - Duration: 30s to 60s per clip.
-       - **text:** you must include the transcript text for each clip.
        - **Viral Score:** You must assign a score from **1-10** (10 being absolutely viral).
        - **Wisdom:** Detailed reasoning is required. Why did you select this? Is it a "Knowledge Bomb"? Is it a "Controversial Take"? Explain the viral psychology.
     
@@ -242,7 +236,7 @@ def analyze_with_flash_lite(file_obj):
         {"start": "MM:SS", "end": "MM:SS", "text": "...", "narrative_role": "Conflict/Climax", "reason": "Wisdom on why this fits the story arc."}
       ],
       "viral_shorts": [
-        {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "text": "text transcript", "virality_score": "9/10", "reason": "Detailed viral psychology analysis. Why this clip will stop the scroll."}
+        {"start": "MM:SS", "end": "MM:SS", "title": "Catchy Title", "virality_score": "9/10", "reason": "Detailed viral psychology analysis. Why this clip will stop the scroll."}
       ]
     }
     """
@@ -265,19 +259,18 @@ def analyze_with_flash_lite(file_obj):
     
     ### CORE ANALYSIS PROTOCOL (STRICT):
     1. **FULL SPECTRUM SCAN:** Analyze from 00:00 to End.
-    2. **STRICT TIMESTAMPS:** Exact start and end timestamps MM:SS format.
+    2. **STRICT TIMESTAMPS:** Exact MM:SS format.
     
     ### DELIVERABLE: The 'Mistake Hunter' (Quality Control)
        - Identify errors to be removed.
-       - **Long Silence:** Dead air > 8 seconds mean no music, no background sounds etc.
+       - **Long Silence:** Dead air > 7 seconds.
        - **Audio Disturbances:** Coughing ("Khansi"), sneezing, loud throat clearing.
-       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake), Repeated sentences for correction etc.
-            You must identify the errors exactly when it STARTS and when it ENDS.
+       - **Editor Commands:** Phrases like "Cut this," "Delete that," "Start over," or "Ghalti hogayi" (Mistake).
     
     ### OUTPUT SCHEMA (JSON ONLY - NO MARKDOWN):
     {
       "mistakes_log": [
-        {"start": "MM:SS", "end": "MM:SS", "error_type": "Silence/Cough/Command", "description": "Speaker coughed/Asked to cut"}
+        {"timestamp": "MM:SS", "error_type": "Silence/Cough/Command", "description": "Speaker coughed/Asked to cut"}
       ]
     }
     """
@@ -311,37 +304,7 @@ def main():
     if 'view_mode' not in st.session_state:
         st.session_state['view_mode'] = "Creative"
 
-    # --- SEO OPTIMIZED UI SECTION START ---
-    
-    # 1. The Title
-    st.markdown('<div style="text-align: center; padding: 20px 0;"><h1 class="main-header">ViralPod AI</h1></div>', unsafe_allow_html=True)
-    
-    # 2. The Professional SEO Bio (Inserted here)
-    st.markdown("""
-    ### Turn 1 Hour of Podcast into 1 Month of Viral Content
-    
-    **Stop wasting hours scrubbing through footage.** ViralPod AI is the intelligent **AI Video Editor** that instantly finds the "Gold" in your podcast.
-
-    * 🚀 **Viral Shorts Maker:** Auto-extracts high-energy clips with a **Virality Score (1-10)**.
-    * 🎬 **Trailer & Teaser Generator:** Builds cinematic 60s narrative trailers automatically.
-    * 🧹 **Mistake Hunter:** Detects silence, coughs, and "cut this" commands for instant cleanup.
-
-    ---
-    """)
-
-    # 3. Hidden Sidebar Keywords
-    with st.sidebar:
-        st.header("Why ViralPod?")
-        st.info("""
-        **Ranked #1 for:**
-        * AI Podcast Clip Generator
-        * Automatic Viral Shorts Maker
-        * Podcast Silence Remover
-        * Video Repurposing Software
-        """)
-        st.divider()
-
-    # --- SEO OPTIMIZED UI SECTION END ---
+    st.markdown('<div style="text-align: center; padding: 40px 0;"><h1 class="main-header">ViralPod AI</h1><p style="color: #94a3b8; font-size: 1.2rem;">Enterprise-Grade Video Intelligence</p></div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 6, 1])
     with col2:
@@ -456,7 +419,7 @@ def main():
             st.markdown("---")
 
             # C. Viral Shorts
-            st.subheader("📱 Viral Short Clips ")
+            st.subheader("📱 Viral Shorts Candidates")
             for short in data.get('viral_shorts', []):
                 st.markdown(f"#### 🎬 {short.get('title', 'Untitled Clip')}")
                 # Handling viral_score vs score key difference
@@ -478,17 +441,18 @@ def main():
                 st.warning(f"⚠️ Inspector found {count} issues to fix.")
                 
                 for error in mistakes:
-                    # Determine Icon based on error type
-                    icon = "🛑" if "Command" in error.get('error_type', '') else "🤧" if "Cough" in error.get('error_type', '') else "🔇"
-                    
-                    # Get timestamps safely
-                    start_time = error.get('start', '00:00')
-                    end_time = error.get('end', '00:00')
+                    icon = "🛑" if "Command" in error['error_type'] else "🤧" if "Cough" in error['error_type'] else "🔇"
                     
                     with st.container(border=True):
-                        c1, c2 = st.columns([1, 5]) # Adjusted width for better look
-                        
+                        c1, c2 = st.columns([1, 4])
                         with c1:
                             st.markdown(f"## {icon}")
-                            # Display the Time
-    
+                            st.caption(error['timestamp'])
+                        with c2:
+                            st.subheader(error['error_type'])
+                            st.write(error['description'])
+                            # Fake "Fix" button for UI demo
+                            st.button("Mark Fixed", key=f"fix_{error['timestamp']}")
+
+if __name__ == "__main__":
+    main()
