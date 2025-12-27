@@ -209,7 +209,7 @@ def analyze_with_flash_lite(file_obj):
     ### DELIVERABLES:
     
     **1. The "Cold Open" Teaser (Total 30s)**
-       - Find 3 specific, punchy sentences upto total duration 30 secs long that represent the CLIMAX or SHOCKING MOMENT of the episode.
+       - Find 3 specific, punchy sentences or groups of sentences, minimum total duration must 30 secs long that represent the CLIMAX or SHOCKING MOMENT of the episode.
        - These clips must come from deep inside the conversation.
        - **Wisdom:** Explain why these specific lines will force a viewer to stop scrolling and watch the full episode.
     
@@ -222,7 +222,7 @@ def analyze_with_flash_lite(file_obj):
        - **Wisdom:** Explain how this specific sequence creates suspense.
     
     **3. Viral Shorts/Reels (3-4 Distinct Clips)**
-       - Find standalone moments suitable for TikTok/Reels.
+       - Find standalone moments (tiny stories) suitable for TikTok/Reels.
        - Duration: 30s to 60s per clip.
        - **Viral Score:** You must assign a score from **1-10** (10 being absolutely viral).
        - **Wisdom:** Detailed reasoning is required. Why did you select this? Is it a "Knowledge Bomb"? Is it a "Controversial Take"? Explain the viral psychology.
@@ -270,7 +270,7 @@ def analyze_with_flash_lite(file_obj):
     ### OUTPUT SCHEMA (JSON ONLY - NO MARKDOWN):
     {
       "mistakes_log": [
-        {"timestamp": "MM:SS", "error_type": "Silence/Cough/Command", "description": "Speaker coughed/Asked to cut"}
+        {"start": "MM:SS", "end": "MM:SS", "error_type": "Silence/Cough/Command", "description": "Speaker coughed/Asked to cut"}
       ]
     }
     """
@@ -430,29 +430,41 @@ def main():
                 st.markdown("---")
 
         # --- OPTION 2: TECHNICAL MODE ---
-        elif st.session_state['view_mode'] == "Technical":
-            st.header("🛠️ Quality Control Room")
+            elif st.session_state['view_mode'] == "Technical":
+        st.header("🛠️ Quality Control Room")
+        
+        mistakes = data.get('mistakes_log', [])
+        if not mistakes:
+            st.success("✅ No critical errors found! Great recording.")
+        else:
+            count = len(mistakes)
+            st.warning(f"⚠️ Inspector found {count} issues to fix.")
             
-            mistakes = data.get('mistakes_log', [])
-            if not mistakes:
-                st.success("✅ No critical errors found! Great recording.")
-            else:
-                count = len(mistakes)
-                st.warning(f"⚠️ Inspector found {count} issues to fix.")
+            for error in mistakes:
+                # Determine Icon based on error type
+                icon = "🛑" if "Command" in error.get('error_type', '') else "🤧" if "Cough" in error.get('error_type', '') else "🔇"
                 
-                for error in mistakes:
-                    icon = "🛑" if "Command" in error['error_type'] else "🤧" if "Cough" in error['error_type'] else "🔇"
+                # Get timestamps safely
+                start_time = error.get('start', '00:00')
+                end_time = error.get('end', '00:00')
+                
+                with st.container(border=True):
+                    c1, c2 = st.columns([1, 5]) # Adjusted width for better look
                     
-                    with st.container(border=True):
-                        c1, c2 = st.columns([1, 4])
-                        with c1:
-                            st.markdown(f"## {icon}")
-                            st.caption(error['timestamp'])
-                        with c2:
-                            st.subheader(error['error_type'])
-                            st.write(error['description'])
-                            # Fake "Fix" button for UI demo
-                            st.button("Mark Fixed", key=f"fix_{error['timestamp']}")
+                    with c1:
+                        st.markdown(f"## {icon}")
+                        # Display the Time Range clearly
+                        st.markdown(f"**{start_time}**")
+                        st.caption("⬇ to")
+                        st.markdown(f"**{end_time}**")
+                        
+                    with c2:
+                        st.subheader(error.get('error_type', 'Unknown Error'))
+                        st.write(error.get('description', 'No description'))
+                        
+                        # Fake "Fix" button using the start time as unique ID
+                        if st.button("Mark Fixed", key=f"fix_{start_time}_{end_time}"):
+                            st.toast(f"Fixed error at {start_time}!")
 
 if __name__ == "__main__":
     main()
