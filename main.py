@@ -384,7 +384,7 @@ def main():
 
         st.markdown("<br>", unsafe_allow_html=True)
         # Re-branded action button
-        start_btn = st.button("🚀 Run Zirak Intelligence") 
+        start_btn = st.button("🚀 Run ViralPod Intelligence") 
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- EXECUTION LOGIC ---
@@ -418,7 +418,7 @@ def main():
             gemini_file = upload_to_gemini_turbo(final_audio_path)
             
             # PHASE 3: ANALYSIS (Save to Session State)
-            with st.spinner("Zirak AI is running Double-Agent Analysis (Creative + Technical)..."):
+            with st.spinner("Viral Pod AI is running Double-Agent Analysis (Creative + Technical)..."):
                 # Run the analysis and Save to Session State (Memory)
                 st.session_state['analysis_data'] = analyze_with_flash_lite(gemini_file)
                 st.session_state['view_mode'] = "Creative" # Default view
@@ -494,7 +494,7 @@ def main():
                 st.success("✅ No critical errors found! Great recording.")
             else:
                 count = len(mistakes)
-                st.warning(f"⚠️ Zirak Inspector found {count} issues to fix.")
+                st.warning(f"⚠️ ViralPod Inspector found {count} issues to fix.")
                 
                 for error in mistakes:
                     icon = "🛑" if "Command" in error['error_type'] else "🤧" if "Cough" in error['error_type'] else "🔇"
