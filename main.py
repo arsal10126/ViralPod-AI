@@ -199,7 +199,7 @@ def upload_to_gemini_turbo(file_path):
 def analyze_with_flash_lite(file_obj):
     # Using Gemini 2.0 Flash Lite (Standard name for the latest Lite model)
     # This is the safest, fastest model for this dual-agent workflow
-    model = genai.GenerativeModel("gemini-2.0-flash-lite")
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
     print("🚀 ViralPod AI: Starting Double-Agent Analysis...")
 
